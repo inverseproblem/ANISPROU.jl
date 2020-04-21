@@ -1,2 +1,2 @@
 # ANISPROU
-Analysis of ITC data on sodium dodecyl sulphate (SDS) mediated protein unfolding.
+Analysis of isothermal titration calorimetry (ITC) data on sodium dodecyl sulphate (SDS) mediated protein unfolding.
