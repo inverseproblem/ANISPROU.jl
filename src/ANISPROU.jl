@@ -15,6 +15,7 @@ using Optim
 using PyPlot 
 using WriteVTK 
 
+export ScaledBeta2DParams
 export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults

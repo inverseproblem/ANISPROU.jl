@@ -20,7 +20,7 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String})
         enout = data[proteinnames[p]]["enout"]
 
         # get a list of files in inpdir
-        fllist = readdir(inpdir2*proteinnames[p])
+        fllist = readdir(joinpath(inpdir,proteinnames[p]))
         # select only files starting with
         checkfile(x) = (startswith(x,proteinnames[p]) && endswith(x,"uM.txt"))
         fllist = filter(checkfile,fllist)

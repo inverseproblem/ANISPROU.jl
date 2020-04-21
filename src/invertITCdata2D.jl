@@ -60,10 +60,11 @@ end
 
 ###########################################################
 
-function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{Real},
-                        lowc::Vector{Real},upc::Vector{Real})
+function setconstraints(betpar::ScaledBeta2DParams,mstart::Vector{<:Real},
+                        lowc::Vector{<:Real},upc::Vector{<:Real})
 
-    ncomp = size(mstart,1)
+    lenm = length(mstart)
+    ncomp = div(lenm,betpar.nummodpar)
 
     lowconstr = zeros(betpar.nummodpar*ncomp)
     upconstr = zeros(betpar.nummodpar*ncomp)
@@ -122,9 +123,9 @@ function forwmod2D(betpar::ScaledBeta2DParams,mcur::AbstractVector{<:Real})
     sscbeta .= zero(eltype(mcur))   #0.0 ## make sure it's zeroed
 
     for n=1:ncomp
-        c1 = (n-1)*nummodpar
+        c1 = (n-1)*nummodparam
         # sum all the components
-        sscbeta .+= singlescaledbeta2D(betpar,mcur[c1+1:c1+nummodpar])
+        sscbeta .+= singlescaledbeta2D(betpar,mcur[c1+1:c1+nummodparam])
 
         # sscbeta .+= singlescaledbeta2D(betpar,mcur[c1+1],mcur[c1+2],mcur[c1+3],
         #                                mcur[c1+4],mcur[c1+5],mcur[c1+6])                                      
@@ -161,7 +162,7 @@ function singlescaledbeta2D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real})
 
     # pre-allocate array of arrays (one for each y value)
     npts = size(betpar.xy,1)
-    scbeta2d = zeros(typeof(mode1),npts)
+    scbeta2d = zeros(eltype(mcur),npts)
     for l=1:npts
         ## xy[l,1] -> SDS concentration
         ## xy[l,2] -> protein concentration
@@ -310,19 +311,29 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractV
     dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
 
     ## Run the Newton inversion with box minimization
-    res = optimize(df, dfc, mstart, IPNewton())
+    println("\nRunning optimization with IPNewton...")
+    result = optimize(df, dfc, mstart, IPNewton())
     mpost = Optim.minimizer(result)
 
-    println(res)
+    println(result)
 
     ##================================
     ## save data
-    hf = h5open(joinpath(outdir,protein*"_ITCresults.h5"),"w")
+    try
+        mkdir(outdir)
+    catch
+        nothing
+    end
+
+    outfile = joinpath(outdir,protein*"_ITCresults.h5")
+    println("Saving results to $outfile\n")
+
+    hf = h5open(outfile,"w")
     hf["protein"] = protein
     hf["mpost"] = mpost
     hf["dobs"] = dobs
-    hf["sdscon"] = xy[:,1] # sdscon
-    hf["procon"] = xy[:,2] # procon
+    hf["sdscon"] = betpar.xy[:,1] # sdscon
+    hf["procon"] = betpar.xy[:,2] # procon
     hf["beta_a"] = betpar.a
     hf["beta_b"] = betpar.b
     hf["beta_ymin"] = betpar.ymax

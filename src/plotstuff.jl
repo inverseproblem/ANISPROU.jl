@@ -5,13 +5,14 @@ function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
     
     dcalcstart = forwmod2D(betpar,mstart)
 
+
     lenm = length(mstart)
     nummodparam = betpar.nummodpar
     ncomp = div(lenm,nummodparam)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
     figure(figsize=(12,5))
-    ym = LinRange(betpar.ymin,betpar.ymax,40)
+    suptitle("Observed data and initial guess")
 
     subplot(121)
     title("$protein observed data")
@@ -31,13 +32,13 @@ function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
     ylabel("Protein concentration [mM]")
     plotmodelines(ncomp,betpar,mstart,"mstart")
    
-    tight_layout()
-
+    #tight_layout()
+    return
 end
 
 ############################################
 
-function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost)
+function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
 
     dcalcstart = forwmod2D(betpar,mstart)
     dcalccur = forwmod2D(betpar,mpost)
@@ -113,8 +114,13 @@ function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost)
     # ylabel("misfit")
 
     tight_layout()
-
-    savefig("../output/"*protein*"_results.pdf")
+    
+    try
+        mkdir(outdir)
+    catch
+        nothing
+    end
+    savefig(joinpath(outdir,protein*"_results.pdf"))
     return nothing
 end
 
