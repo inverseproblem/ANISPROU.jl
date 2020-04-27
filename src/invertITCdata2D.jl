@@ -1,5 +1,5 @@
 
-
+  
 ###############################################
 
 struct ScaledBeta2DParams
@@ -12,7 +12,7 @@ struct ScaledBeta2DParams
     "type of function on y for the amplitude"
     ampfuny::String 
     "sample points at (x,y)"
-    xy::AbstractArray{<:Real,2}
+    xy::Array{<:Real,2}
     "lower bound for Beta function (along x)"
     a::Real
     "upper bound for Beta function (along y)"
@@ -60,21 +60,21 @@ end
 
 ###########################################################
 
-function setconstraints(betpar::ScaledBeta2DParams,mstart::Vector{<:Real},
+function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
                         lowc::Vector{<:Real},upc::Vector{<:Real})
 
-    lenm = length(mstart)
-    ncomp = div(lenm,betpar.nummodpar)
+    lenm = size(mstart,1)
+    ncomp = size(mstart,2) #div(lenm,betpar.nummodpar)
 
-    lowconstr = zeros(betpar.nummodpar*ncomp)
-    upconstr = zeros(betpar.nummodpar*ncomp)
+    lowconstr = zeros(betpar.nummodpar,ncomp)
+    upconstr = zeros(betpar.nummodpar,ncomp)
 
     @show size(lowc),size(upc)
     for c=1:ncomp
-        c1 = (c-1)*betpar.nummodpar
+        #c1 = (c-1)*betpar.nummodpar
         for i=1:betpar.nummodpar
-            lowconstr[c1+i] = lowc[i]
-            upconstr[c1+i]  = upc[i]
+            lowconstr[i,c] = lowc[i]
+            upconstr[i,c] = upc[i]
         end
     end
     
@@ -85,13 +85,13 @@ function setconstraints(betpar::ScaledBeta2DParams,mstart::Vector{<:Real},
     @assert all(mstart.>=lowconstr)
     @assert all(mstart.<=upconstr)
 
-    return lowconstr,upconstr
+    return vec(lowconstr),vec(upconstr)
 end
 
 ######################################################################
 
-function misfitbeta2D(betpar::ScaledBeta2DParams,dobs::AbstractVector{<:Real},
-                      invCd::AbstractMatrix{<:Real},mcur::AbstractVector{<:Real})
+function misfitbeta2D(betpar::ScaledBeta2DParams,dobs::Vector{<:Real},
+                      invCd::Matrix{<:Real},mcur::Matrix{<:Real})
     
     # compute synthetic data
     dcalc = forwmod2D(betpar,mcur)
@@ -109,26 +109,25 @@ end
 
 ###########################################################
 
-function forwmod2D(betpar::ScaledBeta2DParams,mcur::AbstractVector{<:Real})
+function forwmod2D(betpar::ScaledBeta2DParams,mcur::Matrix{<:Real})
                    
-    nummodparam = betpar.nummodpar
+    #nummodparam = betpar.nummodpar
     npts = size(betpar.xy,1)
-    lenm = length(mcur)
-    # make sure that mcur has a multiple of N number of elements
-    @assert mod(lenm,nummodparam)==0
+    # lenm = length(mcur)
+    # # make sure that mcur has a multiple of N number of elements
+    # @assert mod(lenm,nummodparam)==0
+    # ncomp = div(lenm,nummodparam)
 
-    ncomp = div(lenm,nummodparam)
+    nummodpar = size(mcur,1)
+    ncomp = size(mcur,2)
 
     sscbeta = zeros(eltype(mcur),npts)
-    sscbeta .= zero(eltype(mcur))   #0.0 ## make sure it's zeroed
+    # sscbeta .= zero(eltype(mcur))   #0.0 ## make sure it's zeroed
 
     for n=1:ncomp
-        c1 = (n-1)*nummodparam
+        #c1 = (n-1)*nummodpar
         # sum all the components
-        sscbeta .+= singlescaledbeta2D(betpar,mcur[c1+1:c1+nummodparam])
-
-        # sscbeta .+= singlescaledbeta2D(betpar,mcur[c1+1],mcur[c1+2],mcur[c1+3],
-        #                                mcur[c1+4],mcur[c1+5],mcur[c1+6])                                      
+        sscbeta .+= singlescaledbeta2D(betpar,mcur[:,n]) #c1+1:c1+nummodpar])
     end
 
     return sscbeta
@@ -140,8 +139,30 @@ end
   2-Dfied scaled Beta function for given x and y locations.
 """
 function singlescaledbeta2D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real})
-                            # mode1::Real,mode2::Real,kon1::Real,
-                            # kon2::Real,ampl1::Real,ampl2::Real)
+
+    # pre-allocate array of arrays (one for each y value)
+    npts = size(betpar.xy,1)
+    scbeta2d = zeros(eltype(mcur),npts)
+    for l=1:npts
+        ## xy[l,1] -> SDS concentration
+        ## xy[l,2] -> protein concentration
+        ycur = betpar.xy[l,2] # protein concentration
+        xcur = betpar.xy[l,1]
+        
+        ## get the values of model parameters at y=ycur
+        mode,kon,amp = getmodparbeta(betpar,mcur,ycur)
+
+        # beta pdf along x
+        ## xy[l,1] -> SDS concentration
+        scbeta2d[l] = scaledbeta(mode,kon,betpar.a,betpar.b,amp,xcur)
+    end
+
+    return scbeta2d
+end
+
+###########################################################
+
+function getmodparbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},ycur::Real)
 
     ##-------------------------------------------
     ## Linear: Straight line through 2 points:
@@ -160,44 +181,31 @@ function singlescaledbeta2D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real})
     x2 = betpar.ymax
     @assert (x2-x1)!=0.0
 
-    # pre-allocate array of arrays (one for each y value)
-    npts = size(betpar.xy,1)
-    scbeta2d = zeros(eltype(mcur),npts)
-    for l=1:npts
-        ## xy[l,1] -> SDS concentration
-        ## xy[l,2] -> protein concentration
-        xcur = betpar.xy[l,2] # protein concentration
-
-        ## mode
-        if betpar.modefuny=="linear"
-            mode1,mode2 = mcur[betpar.idxmode:betpar.idxmode+1]
-            mode = ((mode2-mode1)/(x2-x1))*(xcur-x1) + mode1
-        elseif betpar.modefuny=="quadratic"
-            error("Quadratic representation of mode along y not yet implemented.")
-        end
-        
-        ## confidence parameter
-        if betpar.konfuny=="linear"
-            kon1,kon2 = mcur[betpar.idxkon:betpar.idxkon+1]
-            kon  = ((kon2-kon1)/(x2-x1))*(xcur-x1) + kon1
-        elseif betpar.konfuny=="quadratic"
-            error("Quadratic representation of confidence parameter along y not yet implemented.")
-        end
-        
-        ## amplitude
-        if betpar.ampfuny=="linear"
-            amp1,amp2 = mcur[betpar.idxamp:betpar.idxamp+1]
-            amp = ((amp2-amp1)/(x2-x1))*(xcur-x1) + amp1
-        elseif betpar.ampfuny=="quadratic"
-            error("Quadratic representation of amplitude parameter along y not yet implemented.")
-        end
-        
-        # beta pdf along x
-        ## xy[l,1] -> SDS concentration
-        scbeta2d[l] = scaledbeta(mode,kon,betpar.a,betpar.b,amp,betpar.xy[l,1])
+    ## mode
+    if betpar.modefuny=="linear"
+        mode1,mode2 = mcur[betpar.idxmode:betpar.idxmode+1]
+        mode = ((mode2-mode1)/(x2-x1))*(ycur-x1) + mode1
+    elseif betpar.modefuny=="quadratic"
+        error("Quadratic representation of mode along y not yet implemented.")
+    end
+    
+    ## confidence parameter
+    if betpar.konfuny=="linear"
+        kon1,kon2 = mcur[betpar.idxkon:betpar.idxkon+1]
+        kon  = ((kon2-kon1)/(x2-x1))*(ycur-x1) + kon1
+    elseif betpar.konfuny=="quadratic"
+        error("Quadratic representation of confidence parameter along y not yet implemented.")
+    end
+    
+    ## amplitude
+    if betpar.ampfuny=="linear"
+        amp1,amp2 = mcur[betpar.idxamp:betpar.idxamp+1]
+        amp = ((amp2-amp1)/(x2-x1))*(ycur-x1) + amp1
+    elseif betpar.ampfuny=="quadratic"
+        error("Quadratic representation of amplitude parameter along y not yet implemented.")
     end
 
-    return scbeta2d
+    return mode,kon,amp
 end
 
 ###########################################################
@@ -244,9 +252,9 @@ end
 """
     Interior Point Newton method from the Optim.jl package.
 """
-function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractVector{<:Real},
-                      invCd::AbstractMatrix{<:Real},mstart::AbstractVector{<:Real},
-                      lowconstr::AbstractVector{<:Real},upconstr::AbstractVector{<:Real},
+function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::Vector{<:Real},
+                      invCd::Matrix{<:Real},mstart::Matrix{<:Real},
+                      lowconstr::Vector{<:Real},upconstr::Vector{<:Real},
                       outdir::String)  
 
     # References
@@ -270,7 +278,7 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractV
     # linear/nonlinear constraints, but that would force the user to
     # provide the variable-derivatives manually, which would be silly.
 
-    # struct TwiceDifferentiableConstraints{F,J,H,T} <: AbstractConstraints
+    # struct TwiceDifferentiableConstraints{F,J,H,T} <: Constraints
     #     c!::F # c!(storage, x) stores the value of the constraint-functions at x
     #     jacobian!::J # jacobian!(storage, x) stores the Jacobian of the constraint-functions
     #     h!::H   # h!(storage, x) stores the hessian of the constraint functions
@@ -280,8 +288,9 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractV
     ## Newton from Optim.jl
     #------------------------------------------------
     
-    function closmisfitOPTIM(clmcur::AbstractVector{<:Real})
-        msf = misfitbeta2D(betpar,dobs,invCd,clmcur) #invCm,mprior,mcur)
+    function closmisfitOPTIM(clmcur::Vector{<:Real})
+        clmcur2d=reshape(clmcur,betpar.nummodpar,ncomp)
+        msf = misfitbeta2D(betpar,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
         return msf
     end
 
@@ -303,18 +312,26 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractV
  
     ##===================================================
     ## https://julianlsolvers.github.io/Optim.jl/stable/#examples/generated/ipnewton_basics/
-
+    
+    ## 2d -> 1D
+    mstartvec = vec(mstart)
+    ncomp = size(mstart,2)
+    
     ## Objective function without constraints
-    df = TwiceDifferentiable(closmisfitOPTIM, fun_grad!, fun_hess!, mstart)
+    df = TwiceDifferentiable(closmisfitOPTIM, fun_grad!, fun_hess!, mstartvec)
 
     ## Add constraints
     dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
 
     ## Run the Newton inversion with box minimization
     println("\nRunning optimization with IPNewton...")
-    result = optimize(df, dfc, mstart, IPNewton())
-    mpost = Optim.minimizer(result)
+    result = optimize(df, dfc, mstartvec, IPNewton())
+    mpostvec = Optim.minimizer(result)
 
+    ## reshape mpost
+    mpost = reshape(mpostvec,size(mstart))
+
+    ## show some info
     println(result)
 
     ##================================
@@ -348,121 +365,336 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::AbstractV
     hf["ampfuncy"] = betpar.ampfuny
     close(hf)
 
+
+
     return mpost
 end
 
 ########################################################################
 ########################################################################
 
-function solveNewton2D(betpar::ScaledBeta2DParams,dobs::AbstractVector{<:Real},
-                       invCd::AbstractMatrix{<:Real},mstart::AbstractVector{<:Real},
-                       niter::Integer,newtonstep::Real)
+# function solveNewton2D(betpar::ScaledBeta2DParams,dobs::Vector{<:Real},
+#                        invCd::Matrix{<:Real},mstart2d::Matrix{<:Real},
+#                        niter::Integer,newtonstep::Real)
 
-    #------------------------------------------------
+#     #------------------------------------------------
     
-    function closmisfitOPTIM(clmcur::AbstractVector{<:Real})
-        msf = misfitbeta2D(betpar,dobs,invCd,clmcur) #invCm,mprior,mcur)
-        return msf
+#     function closmisfitOPTIM(clmcur::Vector{<:Real})
+#         msf = misfitbeta2D(betpar,dobs,invCd,clmcur) #invCm,mprior,mcur)
+#         return msf
+#     end
+
+#     #------------------------------------------------
+
+#     mstart = vec(mstart2d)
+
+#     @assert newtonstep>0.0
+
+#     doplot =false
+
+#     mcur = copy(mstart)
+#     mall = zeros(length(mcur),niter)
+#     misfall = zeros(niter+1)
+#     misfall[1] = misfitbeta2D(betpar,dobs,invCd,mcur)
+#     println("Initial misfit: $(misfall[1]) ")
+#     print("Newton step factor: $newtonstep ")
+
+
+#     if doplot
+#         figure()
+#         subplot(223)
+#         title("model parameters")
+#         plot(mcur,".-",label="mcur")
+#         legend()
+#     end
+
+
+#     for it=1:niter
+#         print("\nNewton iteration #$it     ")
+
+#         ## gradient of the misfit function
+#         grad = ForwardDiff.gradient(closmisfit,mcur)
+
+#         ## Hessian matrix
+#         hess = ForwardDiff.hessian(closmisfit,mcur)
+
+#         ##---------------------------------
+#         ## 1. solve the linear system
+#         # H p = -g
+#         # Ax = y
+#         # x = A\y
+        
+#         ## check positive definitess of Hessian
+#         # pdhess = isposdef(hess)
+#         # print("isposdef(Hessian): $(pdhess)")
+
+#         # if !pdhess
+#             ## Hessian is not positive definite,
+#             ##   so find a pos. def. approximation using 
+#             ##  PositiveFactorizations.jl
+#             F = cholesky(Positive, hess )
+#             # H p = -g
+#             ## Julia should use the appropriate algorithm
+#             ##  given F as a lower triangular Cholesky decomposition
+#             pvec =  -(F \ grad)
+
+#             # pdhess = isposdef(F.L*F.U)
+#             # print(" $(pdhess) ")
+
+#         # else
+            
+#         #     # H p = -g
+#         #     pvec = -(hess \ grad)
+            
+#         # end
+
+
+#         ##---------------------------------
+#         ## 2. update the current solution
+#         mcur = mcur .+ newtonstep .* pvec
+        
+#         mall[:,it] .= mcur
+
+
+#         if doplot
+#             figure()
+#             subplot(221)
+#             title("Gradient")
+#             plot(grad,".-")
+#             subplot(222)
+#             title("Hessian")
+#             imshow(hess)
+#             colorbar()
+#             subplot(223)
+#             title("model parameters")
+#             plot(mcur,".-",label="mcur")
+#             legend()
+#             subplot(224)
+#             title("inv(Hessian)")
+#             imshow(inv(hess))
+#             colorbar()
+#         end
+        
+
+#         ## misfit
+#         misfall[it+1] = misfitbeta2D(betpar,dobs,invCd,reshape(mcur,size(mstart)))
+#         print("misfit: $(misfall[it+1]) ")
+
+#     end
+#     println()
+
+#     return mall,misfall
+# end
+
+##################################################################
+
+function freeboundsdssinglebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real} ;
+                                ampratios::Vector{<:Integer}=nothing,nptsprot::Integer=10)
+
+    x1 = betpar.ymin
+    x2 = betpar.ymax
+    @assert (x2-x1)!=0.0
+    
+    ##-------------------------------------------------
+    ## find free sds and binding number from the modes
+    if betpar.modefuny=="linear"
+        mode1,mode2 = mcur[betpar.idxmode:betpar.idxmode+1]
+        ## line through 2 points:
+        ## y = (y2-y1)/(x2-x1) * (x-x1) + y1
+        angularcoef = (mode2-mode1)/(x2-x1)
+        yzero = 0.0 ## protein concentration=0
+        ## x is the SDS concentration
+        ## y is the protein concentration
+        ## y = angularcoeff * (x-x1) + y1
+        ## intercept for protein concentration == 0.0,
+        ##   looking for x given y=0, so
+        ## 0 = angularcoeff * (x-x1) + y1
+        ## x = (angcoe*x1 - y1)/angcoe
+        x0 = (angularcoef*x1-mode1)/angularcoef 
+        ## Nbound, angular coeff. for x over y (swapped)
+        angcoeN = 1.0/angularcoef
+        sdsfNb_mode = [x0, angcoeN] ## free SDS concentration and binding number 
+         
+    elseif betpar.modefuny=="quadratic"
+        error("Quadratic representation of mode along y not yet implemented.")
     end
 
-    #------------------------------------------------
+    ##-------------------------------------------------
+    ## find free sds and binding number from selected points
+    ##
+    ## [SDS]_tot = [SDS]_free + N_bound * [protein]
+    ##
 
-    @assert newtonstep>0.0
+    # init
+    sdsfreeNbound = Array{Real,2}(undef,0,2) #npoints,2)
 
-    doplot =false
+    ## selectd values of amplitudes to trace points
+    if ampratios==nothing
+        ampratios = LinRange(0.2,1.0,6)
+    end
+    
+    ## sample points for protein concentration
+    ypos = LinRange(betapar.ymin,betapr.ymax,nptsprot) # vector of protein concentrations
 
-    mcur = copy(mstart)
-    mall = zeros(length(mcur),niter)
-    misfall = zeros(niter+1)
-    misfall[1] = misfitbeta2D(betpar,dobs,invCd,mcur)
-    println("Initial misfit: $(misfall[1]) ")
-    print("Newton step factor: $newtonstep ")
-
-
-    if doplot
-        figure()
-        subplot(223)
-        title("model parameters")
-        plot(mcur,".-",label="mcur")
-        legend()
+    for p=1:namppoints
+        ## find the straight line(s) for a given amplitude 
+        fsds,nbou = linefreesdsNbound(betpar,mcur,ypos,ampratios[p])
+        # store results
+        sdsfreeNbound = vcat(sdsfreeNbound,[fsds nbou])
     end
 
+    ## sort data
+    sdsfreeNbound = sortslices(sdsfreeNbound,dims=1)
 
-    for it=1:niter
-        print("\nNewton iteration #$it     ")
+    return sdsfreeNbound,sdsfNb_mode
+end
 
-        ## gradient of the misfit function
-        grad = ForwardDiff.gradient(closmisfit,mcur)
+###########################################################
 
-        ## Hessian matrix
-        hess = ForwardDiff.hessian(closmisfit,mcur)
+function linefreesdsNbound(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                           ypos::Vector{<:Real},ampval::Real)
 
-        ##---------------------------------
-        ## 1. solve the linear system
-        # H p = -g
-        # Ax = y
-        # x = A\y
-        
-        ## check positive definitess of Hessian
-        # pdhess = isposdef(hess)
-        # print("isposdef(Hessian): $(pdhess)")
+    ## find the point where ampl/max(ampl)==selectedampl
+    nypts = length(ypos)
+    ## swapping for least squares, y first and x last, [protein] and [SDS]...
+    sdsc = Dict()
+    protc = Dict()
+    ## left, right with respect to the mode!!
+    lssides = ["left","right"]
+    for s in lssides
+        sdsc[s]  = Vector[]
+        protc[s] = Vector[]
+    end
 
-        # if !pdhess
-            ## Hessian is not positive definite,
-            ##   so find a pos. def. approximation using 
-            ##  PositiveFactorizations.jl
-            F = cholesky(Positive, hess )
-            # H p = -g
-            ## Julia should use the appropriate algorithm
-            ##  given F as a lower triangular Cholesky decomposition
-            pvec =  -(F \ grad)
-
-            # pdhess = isposdef(F.L*F.U)
-            # print(" $(pdhess) ")
-
-        # else
-            
-        #     # H p = -g
-        #     pvec = -(hess \ grad)
-            
-        # end
-
-
-        ##---------------------------------
-        ## 2. update the current solution
-        mcur = mcur .+ newtonstep .* pvec
-        
-        mall[:,it] .= mcur
-
-
-        if doplot
-            figure()
-            subplot(221)
-            title("Gradient")
-            plot(grad,".-")
-            subplot(222)
-            title("Hessian")
-            imshow(hess)
-            colorbar()
-            subplot(223)
-            title("model parameters")
-            plot(mcur,".-",label="mcur")
-            legend()
-            subplot(224)
-            title("inv(Hessian)")
-            imshow(inv(hess))
-            colorbar()
+    ## find the x,y values for given amplitudes
+    ## loop on all y values
+    for i=1:nypts
+        ## the following returns 2-element array
+        xpos,ytmp,sidevec = findxbeta(betpar,mcur,ampval,ypos[i])
+        ## y first and x last, [protein] and [SDS]...
+        for s=1:length(sidevec)
+            push!(sdsc[sidevec[s]],xpos)
+            push!(protc[sidevec[s]],ytmp)
         end
-        
-
-        ## misfit
-        misfall[it+1] = misfitbeta2D(betpar,dobs,invCd,mcur)
-        print("misfit: $(misfall[it+1]) ")
-
     end
-    println()
 
-    return mall,misfall
+    ## find the straight line by least squares
+    intercept = Vector{<:Real}(undef,2)
+    angcoe = Vector{<:Real}(undef,2)
+    for (i,sd) in enumerate(lssides)
+        ## least squares on swapped x and y, i.e., [SDS] and [protein]
+        G = [protc[sd] ones(length(protc[sd]))]
+        dobs = sdsc[sd]
+        ## overdetermined least squares
+        ## mpost = (G'*G)*G'*dobs
+        ## (G'*G) * h = G'
+        lstmp = (G'*G) \ G'
+        mpost = lstmp * dobs
+
+        angcoe[i] = mpost[1]
+        intercept[i] = mpost[2]
+    end    
+        
+    return intercept,angcoe
+end
+
+
+###########################################################
+
+function findxbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                   ampval::Real,yval::Real)
+
+    ##------------------------------------------------------
+    function misfroot(x::Real)
+        bval = scaledbeta(mode,kon,betpar.a,betpar.b,amp,x)
+        msr = bval-ampval
+        return msr 
+    end
+    ##------------------------------------------------------
+
+    ## mode,kon,amp
+    ## get the values of model parameters at y=ycur
+    mode,kon,amp = getmodparbeta(betpar,mcur,yval)
+
+    ## left, right with respect to the mode!!
+    maxamp = scaledbeta(mode,kon,betpar.a,betpar.b,amp,mode)
+
+    lssides = ["left","right"]
+    if ampval==maxamp
+        xpos,ypos,sides = mode,yval,"left"
+    else
+        xpos = Vector{<:Real}(undef,2)
+        ypos = Vector{<:Real}(undef,2)
+        for (i,sd) in enumerate(lssides)
+            sd=="left" ? (abracket=betpar.a) : (abracket=mode)
+            sd=="left" ? (bbracket=mode) : (bbracket=betpar.b)
+            ## https://github.com/JuliaMath/Roots.jl
+            xpoint = fzero(misfroot,abracket,bbracket)
+            xpos[i],ypos[i],sides[i] = xpoint,yval,sd
+        end
+    end
+    
+    return xpos,ypos,sides
+end
+ 
+###########################################################
+
+function areasinglebeta1D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                          protcon::Real)
+
+    @assert length(mcur)==betpar.nummodpar
+
+    ##---------------------------------------------------------
+    betaval(x::Real) = scaledbeta(mode,kon,abeta,bbeta,amp,x)
+    
+    ## get the values of model parameters at y=ycur
+    mode,kon,amp = getmodparbeta(betpar,mcur,protcon)
+
+    ##---------------------------------------------------------
+    # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
+    #                     reltol=1e-8, abstol=0, maxevals=0)
+    abeta = betpar.a
+    bbeta = betpar.b
+    yval = protcon
+    ## get the values of model parameters at y=ycur
+    mode,kon,amp = getmodparbeta(betpar,mcur,yval)
+
+    integr,err = hquadrature(betaval,abeta,bbeta,
+                             reltol=1e-8,abstol=0,maxevals=0)
+
+    return integr,err
+end
+
+###########################################################
+
+function volumesinglebeta2D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                            minprotcon::Real,maxprotcon::Real)
+
+    
+    ##@assert length(mcur)==betpar.nummodpar*ncomp
+
+    ##---------------------------------------------------
+    function betaval(xy::Vector{<:Real})::Real
+        ## get the values of model parameters at y=ycur
+        x=xy[1]
+        y=xy[2]
+        mode,kon,amp = getmodparbeta(betpar,mcur,y)
+        ## calculate value of beta function
+        bval = scaledbeta(mode,kon,betpar.a,betpar.b,amp,x)
+        return bval 
+    end
+    ##---------------------------------------------------
+  
+    ##---------------------------------------------------------
+    # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
+    #                     reltol=1e-8, abstol=0, maxevals=0)
+    xmin = [betpar.a,minprotcon]
+    xmax = [betpar.b,maxprotcon]
+
+    integr,err = hcubature(betaval,xmin,xmax,
+                           reltol=1e-8,abstol=0,maxevals=0)
+
+    return integr,err
 end
 
 ###########################################################

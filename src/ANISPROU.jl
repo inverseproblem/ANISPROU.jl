@@ -10,7 +10,9 @@ using Distributions
 using ForwardDiff
 #using ReverseDiff
 using HDF5
-using LinearAlgebra 
+using LinearAlgebra
+using Roots
+using Cubature
 using Optim
 using PyPlot 
 using WriteVTK 
@@ -20,6 +22,8 @@ export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults
 export saveresultVTK
+#export freeboundsdssinglebeta
+export areasinglebeta1D,volumesinglebeta2D
 
 include("readITCdata.jl")
 include("invertITCdata2D.jl")

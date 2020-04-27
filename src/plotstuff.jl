@@ -5,10 +5,9 @@ function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
     
     dcalcstart = forwmod2D(betpar,mstart)
 
-
-    lenm = length(mstart)
-    nummodparam = betpar.nummodpar
-    ncomp = div(lenm,nummodparam)
+    #lenm = length(mstart)
+    nummodparam = size(mstart,1) #betpar.nummodpar
+    #ncomp = size(mstart,2) #div(lenm,nummodparam)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
     figure(figsize=(12,5))
@@ -21,7 +20,7 @@ function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")    
-    plotmodelines(ncomp,betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"mstart")
 
     subplot(122)
     title("dcalc start")
@@ -30,7 +29,7 @@ function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(ncomp,betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"mstart")
    
     #tight_layout()
     return
@@ -47,7 +46,7 @@ function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
     ## show data
     lenm = length(mstart)
     nummodparam = betpar.nummodpar
-    ncomp = div(lenm,nummodparam)
+    #ncomp = div(lenm,nummodparam)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
 
@@ -61,7 +60,7 @@ function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
     ylabel("Protein concentration [mM]")
     xlim([-2,betpar.b])
     ylim([0.9*betpar.ymin,1.05*betpar.ymax])
-    #plotmodelines(ncomp,betpar,mpost,"mpost")
+    #plotmodelines(betpar,mpost,"mpost")
     
     subplot(232)
     title("dcalc start")
@@ -70,12 +69,12 @@ function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(ncomp,betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"mstart")
 
     subplot(233)
     title("model parameters")
-    plot(mstart,".-",label="mstart")
-    plot(mpost,".-",label="mpost")
+    plot(vec(mstart),".-",label="mstart")
+    plot(vec(mpost),".-",label="mpost")
     legend()
 
     subplot(234)
@@ -85,7 +84,7 @@ function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(ncomp,betpar,mpost,"mpost")    
+    plotmodelines(betpar,mpost,"mpost")    
     
     
     subplot(235)
@@ -126,15 +125,16 @@ end
 
 ############################################
 
-function plotmodelines(ncomp,betpar,mcur,modname)
+function plotmodelines(betpar,mcur,modname)
     Npoints = 40
+    ncomp = size(mcur,2)
     ym = LinRange(betpar.ymin,betpar.ymax,Npoints)
     for i=1:ncomp
-        s1 = (i-1)*betpar.nummodpar + 1 
-        s2 = (i-1)*betpar.nummodpar + 2 
+        # s1 = (i-1)*betpar.nummodpar + 1 
+        # s2 = (i-1)*betpar.nummodpar + 2 
         x1 = betpar.ymin
         x2 = betpar.ymax
-        xm = (mcur[s2].-mcur[s1])./(x2.-x1).*(ym.-x1) .+ mcur[s1] 
+        xm = (mcur[2,i].-mcur[1,i])./(x2.-x1).*(ym.-x1) .+ mcur[1,i] 
         if i==ncomp
             plot(xm,ym,"-k",linewidth=0.7,label="mode $modname")
         else
@@ -148,7 +148,7 @@ end
 
 ############################################
 
-function saveresultVTK(  )
+function saveresultVTK(betpar,mpost)
 
     ## VTK stuff
     Nx=500
