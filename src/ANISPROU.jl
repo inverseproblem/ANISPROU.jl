@@ -22,8 +22,10 @@ export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults
 export saveresultVTK
-#export freeboundsdssinglebeta
-export areasinglebeta1D,volumesinglebeta2D
+export freeboundsds_singlebeta
+export area_singlebeta,volume_singlebeta
+export plotbindingisotherm
+
 
 include("readITCdata.jl")
 include("invertITCdata2D.jl")

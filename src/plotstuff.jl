@@ -1,10 +1,12 @@
 
 ################################################################
 
-function plotinitialguess(protein,betpar,sdscon,procon,dobs,mstart)
+function plotinitialguess(protein,betpar,dobs,mstart)
     
     dcalcstart = forwmod2D(betpar,mstart)
-
+    sdscon = betpar.xy[:,1]
+    procon = betpar.xy[:,2]
+    
     #lenm = length(mstart)
     nummodparam = size(mstart,1) #betpar.nummodpar
     #ncomp = size(mstart,2) #div(lenm,nummodparam)
@@ -37,11 +39,13 @@ end
 
 ############################################
 
-function plotresults(protein,betpar,sdscon,procon,dobs,mstart,mpost,outdir)
+function plotresults(protein,betpar,dobs,mstart,mpost,outdir)
 
     dcalcstart = forwmod2D(betpar,mstart)
     dcalccur = forwmod2D(betpar,mpost)
-
+   sdscon = betpar.xy[:,1]
+    procon = betpar.xy[:,2]
+    
     ##==============================
     ## show data
     lenm = length(mstart)
@@ -147,6 +151,52 @@ function plotmodelines(betpar,mcur,modname)
 end
 
 ############################################
+
+function plotbindingisotherm(betpar,mpost,sdsfNb; Npts=100)
+
+    dcalc = forwmod2D(betpar,mpost)    
+    sdscon = betpar.xy[:,1]
+    procon = betpar.xy[:,2]
+    
+    figure(figsize=(13,5))
+    subplot(121)
+    scatter(sdscon,procon,c=dcalc,cmap=PyPlot.get_cmap("rainbow"))
+    colorbar()
+    xlabel("SDS concentration [mM]")
+    ylabel("Protein concentration [mM]")
+    ##
+    ##  y = m*x + y0
+    ##
+    ## One line per row
+    ##N = 100
+    firstplot=true
+    for ico=1:length(sdsfNb)
+        for r=1:size(sdsfNb[ico],1)
+            x = collect(LinRange(betpar.ymin,betpar.ymax,Npts))
+            y = sdsfNb[ico][r,2].*x .+ sdsfNb[ico][r,1]
+            if firstplot
+                plot(y,x,"--r",linewidth=0.7,label="selected fitted amplitudes")
+                firstplot = false
+            else
+                plot(y,x,"--r",linewidth=0.7)
+            end
+        end
+    end
+
+    plotmodelines(betpar,mpost,"")
+
+    subplot(122)
+    for ico=1:length(sdsfNb)
+        plot(sdsfNb[ico][:,1],sdsfNb[ico][:,2],"o-")
+    end
+    xlabel("free SDS conc. [mM]")
+    ylabel("Nbound")
+
+    tight_layout()
+    return nothing
+end
+
+######################################################################
 
 function saveresultVTK(betpar,mpost)
 

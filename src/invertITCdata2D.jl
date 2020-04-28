@@ -111,13 +111,7 @@ end
 
 function forwmod2D(betpar::ScaledBeta2DParams,mcur::Matrix{<:Real})
                    
-    #nummodparam = betpar.nummodpar
     npts = size(betpar.xy,1)
-    # lenm = length(mcur)
-    # # make sure that mcur has a multiple of N number of elements
-    # @assert mod(lenm,nummodparam)==0
-    # ncomp = div(lenm,nummodparam)
-
     nummodpar = size(mcur,1)
     ncomp = size(mcur,2)
 
@@ -125,9 +119,8 @@ function forwmod2D(betpar::ScaledBeta2DParams,mcur::Matrix{<:Real})
     # sscbeta .= zero(eltype(mcur))   #0.0 ## make sure it's zeroed
 
     for n=1:ncomp
-        #c1 = (n-1)*nummodpar
         # sum all the components
-        sscbeta .+= singlescaledbeta2D(betpar,mcur[:,n]) #c1+1:c1+nummodpar])
+        sscbeta .+= singlescaledbeta2D(betpar,mcur[:,n]) 
     end
 
     return sscbeta
@@ -365,8 +358,6 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,dobs::Vector{<:
     hf["ampfuncy"] = betpar.ampfuny
     close(hf)
 
-
-
     return mpost
 end
 
@@ -488,54 +479,22 @@ end
 
 ##################################################################
 
-function freeboundsdssinglebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real} ;
-                                ampratios::Vector{<:Integer}=nothing,nptsprot::Integer=10)
-
-    x1 = betpar.ymin
-    x2 = betpar.ymax
-    @assert (x2-x1)!=0.0
-    
-    ##-------------------------------------------------
-    ## find free sds and binding number from the modes
-    if betpar.modefuny=="linear"
-        mode1,mode2 = mcur[betpar.idxmode:betpar.idxmode+1]
-        ## line through 2 points:
-        ## y = (y2-y1)/(x2-x1) * (x-x1) + y1
-        angularcoef = (mode2-mode1)/(x2-x1)
-        yzero = 0.0 ## protein concentration=0
-        ## x is the SDS concentration
-        ## y is the protein concentration
-        ## y = angularcoeff * (x-x1) + y1
-        ## intercept for protein concentration == 0.0,
-        ##   looking for x given y=0, so
-        ## 0 = angularcoeff * (x-x1) + y1
-        ## x = (angcoe*x1 - y1)/angcoe
-        x0 = (angularcoef*x1-mode1)/angularcoef 
-        ## Nbound, angular coeff. for x over y (swapped)
-        angcoeN = 1.0/angularcoef
-        sdsfNb_mode = [x0, angcoeN] ## free SDS concentration and binding number 
-         
-    elseif betpar.modefuny=="quadratic"
-        error("Quadratic representation of mode along y not yet implemented.")
-    end
-
-    ##-------------------------------------------------
-    ## find free sds and binding number from selected points
-    ##
-    ## [SDS]_tot = [SDS]_free + N_bound * [protein]
-    ##
+function freeboundsds_singlebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real} ;
+                                ampratios::Union{Vector{<:Real},Nothing}=nothing,
+                                nptsprot::Integer=10)
 
     # init
-    sdsfreeNbound = Array{Real,2}(undef,0,2) #npoints,2)
+    sdsfreeNbound = Array{Float64,2}(undef,0,2) #npoints,2)
 
     ## selectd values of amplitudes to trace points
     if ampratios==nothing
-        ampratios = LinRange(0.2,1.0,6)
+        ampratios = collect(LinRange(0.1,1.0,6))
     end
     
-    ## sample points for protein concentration
-    ypos = LinRange(betapar.ymin,betapr.ymax,nptsprot) # vector of protein concentrations
+    ## sample points for protein concentration (vector)
+    ypos = collect(LinRange(betpar.ymin,betpar.ymax,nptsprot))
 
+    namppoints = length(ampratios)
     for p=1:namppoints
         ## find the straight line(s) for a given amplitude 
         fsds,nbou = linefreesdsNbound(betpar,mcur,ypos,ampratios[p])
@@ -546,13 +505,13 @@ function freeboundsdssinglebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real} 
     ## sort data
     sdsfreeNbound = sortslices(sdsfreeNbound,dims=1)
 
-    return sdsfreeNbound,sdsfNb_mode
+    return sdsfreeNbound #,sdsfNb_mode
 end
 
 ###########################################################
 
 function linefreesdsNbound(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
-                           ypos::Vector{<:Real},ampval::Real)
+                           ypos::Vector{<:Real},ampratio::Real)
 
     ## find the point where ampl/max(ampl)==selectedampl
     nypts = length(ypos)
@@ -561,27 +520,33 @@ function linefreesdsNbound(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
     protc = Dict()
     ## left, right with respect to the mode!!
     lssides = ["left","right"]
-    for s in lssides
-        sdsc[s]  = Vector[]
-        protc[s] = Vector[]
+ 
+    ##------------------------------------------------
+    ## find the x,y values for given amplitudes
+    ## loop on all y values  
+    for i=1:nypts
+        ## the following returns 1 or 2-element array
+        xpos,ytmp,sidevec = findxbeta(betpar,mcur,ampratio,ypos[i])
+        ## y first and x last, [protein] and [SDS]...
+        for s=1:length(xpos)
+            try
+                push!(sdsc[sidevec[s]],xpos[s])
+                push!(protc[sidevec[s]],ytmp[s])
+            catch
+                sdsc[sidevec[s]]  = Float64[]
+                protc[sidevec[s]] = Float64[]
+                push!(sdsc[sidevec[s]],xpos[s])
+                push!(protc[sidevec[s]],ytmp[s])
+            end
+        end       
     end
 
-    ## find the x,y values for given amplitudes
-    ## loop on all y values
-    for i=1:nypts
-        ## the following returns 2-element array
-        xpos,ytmp,sidevec = findxbeta(betpar,mcur,ampval,ypos[i])
-        ## y first and x last, [protein] and [SDS]...
-        for s=1:length(sidevec)
-            push!(sdsc[sidevec[s]],xpos)
-            push!(protc[sidevec[s]],ytmp)
-        end
-    end
+    nkeys = length(keys(sdsc))
 
     ## find the straight line by least squares
-    intercept = Vector{<:Real}(undef,2)
-    angcoe = Vector{<:Real}(undef,2)
-    for (i,sd) in enumerate(lssides)
+    intercept = Vector{Float64}(undef,nkeys)
+    angcoe = Vector{Float64}(undef,nkeys)
+    for (i,sd) in enumerate(keys(sdsc))
         ## least squares on swapped x and y, i.e., [SDS] and [protein]
         G = [protc[sd] ones(length(protc[sd]))]
         dobs = sdsc[sd]
@@ -594,7 +559,7 @@ function linefreesdsNbound(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
         angcoe[i] = mpost[1]
         intercept[i] = mpost[2]
     end    
-        
+
     return intercept,angcoe
 end
 
@@ -602,15 +567,22 @@ end
 ###########################################################
 
 function findxbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
-                   ampval::Real,yval::Real)
+                   ampratio::Real,yval::Real)
+
+    ## yval -> protein concentration
 
     ##------------------------------------------------------
     function misfroot(x::Real)
         bval = scaledbeta(mode,kon,betpar.a,betpar.b,amp,x)
-        msr = bval-ampval
+        ## abs(f(x)) because we have also negative amplitudes,
+        ##  however, the beta is always either all positive or
+        ##  all negative
+        msr = bval-ampval 
         return msr 
     end
     ##------------------------------------------------------
+
+    @assert 0.0<ampratio<=1.0
 
     ## mode,kon,amp
     ## get the values of model parameters at y=ycur
@@ -618,29 +590,33 @@ function findxbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
 
     ## left, right with respect to the mode!!
     maxamp = scaledbeta(mode,kon,betpar.a,betpar.b,amp,mode)
+    ## actual amplitude value
+    ampval = ampratio*maxamp
 
     lssides = ["left","right"]
     if ampval==maxamp
-        xpos,ypos,sides = mode,yval,"left"
+        xpos,ypos,sides = [mode],[yval],["left"]
     else
-        xpos = Vector{<:Real}(undef,2)
-        ypos = Vector{<:Real}(undef,2)
+        xpos = Vector{Float64}(undef,2)
+        ypos = Vector{Float64}(undef,2)
+        sides = Vector{String}(undef,2)
         for (i,sd) in enumerate(lssides)
             sd=="left" ? (abracket=betpar.a) : (abracket=mode)
             sd=="left" ? (bbracket=mode) : (bbracket=betpar.b)
             ## https://github.com/JuliaMath/Roots.jl
             xpoint = fzero(misfroot,abracket,bbracket)
+ #@show i,sd,abracket,bbracket,xpoint,sd
             xpos[i],ypos[i],sides[i] = xpoint,yval,sd
         end
     end
-    
+#@show xpos,ypos,sides
     return xpos,ypos,sides
 end
  
 ###########################################################
 
-function areasinglebeta1D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
-                          protcon::Real)
+function area_singlebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                        protcon::Real)
 
     @assert length(mcur)==betpar.nummodpar
 
@@ -667,11 +643,8 @@ end
 
 ###########################################################
 
-function volumesinglebeta2D(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
-                            minprotcon::Real,maxprotcon::Real)
-
-    
-    ##@assert length(mcur)==betpar.nummodpar*ncomp
+function volume_singlebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},
+                          minprotcon::Real,maxprotcon::Real)
 
     ##---------------------------------------------------
     function betaval(xy::Vector{<:Real})::Real
