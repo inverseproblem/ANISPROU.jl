@@ -152,7 +152,7 @@ end
 
 ############################################
 
-function plotbindingisotherm(betpar,mpost,sdsfNb; Npts=100)
+function plotbindingisotherm(protein,betpar,mpost,sdsfNb,outdir; Npts=100)
 
     dcalc = forwmod2D(betpar,mpost)    
     sdscon = betpar.xy[:,1]
@@ -193,6 +193,8 @@ function plotbindingisotherm(betpar,mpost,sdsfNb; Npts=100)
     ylabel("Nbound")
 
     tight_layout()
+
+    savefig(joinpath(outdir,protein*"_binding-isotherm.pdf"))
     return nothing
 end
 

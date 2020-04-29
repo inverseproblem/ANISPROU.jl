@@ -14,7 +14,7 @@ function launchall( )
     mpost,betpar,dobs = invertITCdata(inpdir,protein)
 
     ## construct binding isotherm using selected amplitude points
-    sdsfNbou = bindingisotherm(betpar,mpost)
+    sdsfNbou = bindingisotherm(protein,betpar,mpost)
     
     ## compute area one selected Beta component at
     ##   requested protein concentration
@@ -31,12 +31,12 @@ function launchall( )
     volume,errvol = volume_singlebeta(betpar,mpost[:,icomp],minprotcon,maxprotcon)
     println("\nVolume for component number $icomp: $volume\n")
 
-    return
+    return #mpost,betpar,dobs,area,sdsfNbou,volume
 end
 
 ###########################################################
 
-function bindingisotherm(betpar::ScaledBeta2DParams,mpost::Matrix{<:Real})
+function bindingisotherm(protein::String,betpar::ScaledBeta2DParams,mpost::Matrix{<:Real})
 
     ncomp = size(mpost,2)
     sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
@@ -61,7 +61,7 @@ function bindingisotherm(betpar::ScaledBeta2DParams,mpost::Matrix{<:Real})
     end
 
     ## plot results
-    plotbindingisotherm(betpar,mpost,sdsfNbou, Npts=100)
+    plotbindingisotherm(protein,betpar,mpost,sdsfNbou,"figs",Npts=100)
 
     return sdsfNbou
 end
