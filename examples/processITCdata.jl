@@ -6,39 +6,40 @@ using LinearAlgebra
 
 ###########################################################
 
-function launchall( )
+function launchall()
 
     ## do the fitting of data with Beta functions
     inpdir="inputdata/"
     protein = "IM7"
-    mpost,betpar,dobs = invertITCdata(inpdir,protein)
+    betamix,dobs = invertITCdata(inpdir,protein)
 
     ## construct binding isotherm using selected amplitude points
-    sdsfNbou = bindingisotherm(protein,betpar,mpost)
+    sdsfNbou = bindingisotherm_singlebetas(protein,betamix)
     
-    ## compute area one selected Beta component at
+    ## compute area for all Beta components at
     ##   requested protein concentration
-    icomp = 2 # component number
     protcon = 0.08
-    area,errarea = area_singlebeta(betpar,mpost[:,icomp],protcon)
-    println("\nArea for component number $icomp: $area\n")
+    area,errarea = area_betamix(betamix,protcon)
+    println("\nArea for all components: $area\n")
 
-    ## compute volume for selected Beta component between
+    ## compute volume for all Beta components within
     ##   requested bounds of protein concentration
-    icomp = 2 # component number
-    minprotcon = betpar.ymin
-    maxprotcon = betpar.ymax
-    volume,errvol = volume_singlebeta(betpar,mpost[:,icomp],minprotcon,maxprotcon)
-    println("\nVolume for component number $icomp: $volume\n")
+    minprotcon = betamix.betpar.ymin
+    maxprotcon = betamix.betpar.ymax
+    volume,errvol = volume_betamix(betamix,minprotcon,maxprotcon)
+    println("\nVolume for all component: $volume\n")
 
     return #mpost,betpar,dobs,area,sdsfNbou,volume
 end
 
 ###########################################################
 
-function bindingisotherm(protein::String,betpar::ScaledBeta2DParams,mpost::Matrix{<:Real})
+function bindingisotherm_singlebetas(protein::String,betamix::BetaMix2D)
 
-    ncomp = size(mpost,2)
+    betpar = betamix.betpar
+    mcur = betamix.modkonamp
+
+    ncomp = size(mcur,2)
     sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
 
     ## number of sampling points along x, i.e., [SDS]
@@ -56,12 +57,12 @@ function bindingisotherm(protein::String,betpar::ScaledBeta2DParams,mpost::Matri
         end
 
         ## calculate intercept and angular coefficient, i.e., [SDS]_free and N_bound
-        sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mpost[:,ico],ampratios=ampratios)
+        sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mcur[:,ico],ampratios=ampratios)
 
     end
 
     ## plot results
-    plotbindingisotherm(protein,betpar,mpost,sdsfNbou,"figs",Npts=100)
+    plotbindingisotherm(protein,betpar,mcur,sdsfNbou,"figs",Npts=100)
 
     return sdsfNbou
 end
@@ -177,14 +178,14 @@ function invertITCdata(inpdir::String,protein::String)
 
     ## IPNewton from Optim.jl, box constraints
     outdir = "output"
-    mpost = solveinvprob(protein,betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
+    betamix = solveinvprob(protein,betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
  
     ##================================
     ## plot results
     outdir = "figs"
-    plotresults(protein,betpar,dobs,mstart,mpost,outdir)
+    plotresults(protein,betamix.betpar,dobs,mstart,betamix.modkonamp,outdir)
 
-    return mpost,betpar,dobs
+    return betamix,dobs
 end
 
 ######################################################################
