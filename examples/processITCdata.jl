@@ -11,10 +11,10 @@ function launchall()
     ## do the fitting of data with Beta functions
     inpdir="inputdata/"
     protein = "IM7"
-    betamix,dobs = invertITCdata(inpdir,protein)
+    betamix,xy,dobs = invertITCdata(inpdir,protein)
 
     ## construct binding isotherm using selected amplitude points
-    sdsfNbou = bindingisotherm_singlebetas(protein,betamix)
+    sdsfNbou = bindingisotherm_singlebetas(protein,xy,betamix)
     
     ## compute area for all Beta components at
     ##   requested protein concentration
@@ -29,12 +29,12 @@ function launchall()
     volume,errvol = volume_betamix(betamix,minprotcon,maxprotcon)
     println("\nVolume for all component: $volume\n")
 
-    return #mpost,betpar,dobs,area,sdsfNbou,volume
+    return betamix  #mpost,betpar,dobs,area,sdsfNbou,volume
 end
 
 ###########################################################
 
-function bindingisotherm_singlebetas(protein::String,betamix::BetaMix2D)
+function bindingisotherm_singlebetas(protein::String,xy::Array{<:Real},betamix::BetaMix2D)
 
     betpar = betamix.betpar
     mcur = betamix.modkonamp
@@ -62,7 +62,7 @@ function bindingisotherm_singlebetas(protein::String,betamix::BetaMix2D)
     end
 
     ## plot results
-    plotbindingisotherm(protein,betpar,mcur,sdsfNbou,"figs",Npts=100)
+    plotbindingisotherm(protein,betpar,xy,mcur,sdsfNbou,"figs",Npts=100)
 
     return sdsfNbou
 end
@@ -98,7 +98,7 @@ function invertITCdata(inpdir::String,protein::String)
     konfuny  = "linear"
     ampfuny  = "linear"
     betpar = ScaledBeta2DParams(modefuny=modefuny,konfuny=konfuny,
-                                ampfuny=ampfuny,xy=xy,a=a,b=b,
+                                ampfuny=ampfuny,a=a,b=b,
                                 ymin=minprotcon,ymax=maxprotcon)
 
     ##=======================================
@@ -178,14 +178,14 @@ function invertITCdata(inpdir::String,protein::String)
 
     ## IPNewton from Optim.jl, box constraints
     outdir = "output"
-    betamix = solveinvprob(protein,betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
+    betamix = solveinvprob(protein,betpar,xy,dobs,invCd,mstart,lowconstr,upconstr,outdir)
  
     ##================================
     ## plot results
     outdir = "figs"
-    plotresults(protein,betamix.betpar,dobs,mstart,betamix.modkonamp,outdir)
+    plotresults(protein,betamix.betpar,xy,dobs,mstart,betamix.modkonamp,outdir)
 
-    return betamix,dobs
+    return betamix,xy,dobs
 end
 
 ######################################################################

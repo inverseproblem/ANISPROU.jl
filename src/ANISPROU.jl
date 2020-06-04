@@ -22,9 +22,11 @@ export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults
 export saveresultVTK
+export findcurvefeatures
+export calcfreeSDSNbound
 export freeboundsds_singlebeta,freeboundsds_betamix
 export area_betamix,volume_betamix
-export plotbindingisotherm
+export plotbindisotherm,plotfoundfeatures
 
 
 include("readITCdata.jl")

@@ -1,11 +1,11 @@
 
 ################################################################
 
-function plotinitialguess(protein,betpar,dobs,mstart)
+function plotinitialguess(protein,betpar,xy,dobs,mstart)
     
-    dcalcstart = forwmod2D(betpar,mstart)
-    sdscon = betpar.xy[:,1]
-    procon = betpar.xy[:,2]
+    dcalcstart = forwmod2D(betpar,xy,mstart)
+    sdscon = xy[:,1]
+    procon = xy[:,2]
     
     #lenm = length(mstart)
     nummodparam = size(mstart,1) #betpar.nummodpar
@@ -39,12 +39,12 @@ end
 
 ############################################
 
-function plotresults(protein,betpar,dobs,mstart,mpost,outdir)
+function plotresults(protein,betpar,xy,dobs,mstart,mpost,outdir)
 
-    dcalcstart = forwmod2D(betpar,mstart)
-    dcalccur = forwmod2D(betpar,mpost)
-   sdscon = betpar.xy[:,1]
-    procon = betpar.xy[:,2]
+    dcalcstart = forwmod2D(betpar,xy,mstart)
+    dcalccur = forwmod2D(betpar,xy,mpost)
+    sdscon = xy[:,1]
+    procon = xy[:,2]
     
     ##==============================
     ## show data
@@ -152,11 +152,11 @@ end
 
 ############################################
 
-function plotbindingisotherm(protein,betpar,mpost,sdsfNb,outdir; Npts=100)
+function plotbindingisotherm(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
 
-    dcalc = forwmod2D(betpar,mpost)    
-    sdscon = betpar.xy[:,1]
-    procon = betpar.xy[:,2]
+    dcalc = forwmod2D(betpar,xy,mpost)    
+    sdscon = xy[:,1]
+    procon = xy[:,2]
     
     figure(figsize=(13,5))
     subplot(121)
@@ -212,9 +212,9 @@ function saveresultVTK(betpar,mpost)
         xy[i+Nx*(j-1),:] .= (xvtk[i],yvtk[j])
     end
     vtkfile = vtk_grid("../output/"*protein*"_gridITCdata", xvtk, 100.0 .* yvtk)
-    betparvtk = ScaledBeta2DParams(nummodpar=nummodpar,xy=xy,a=betpar.a,b=betpar.b,
+    betparvtk = ScaledBeta2DParams(nummodpar=nummodpar,a=betpar.a,b=betpar.b,
                                    ymin=betpar.ymin,ymax=betpar.ymax)
-    dcalcvtk = forwmod2D(betparvtk,mpost)
+    dcalcvtk = forwmod2D(betparvtk,xy,mpost)
     dcvtk2 = reshape(dcalcvtk,Nx,Ny)
     vtkfile["energyout",VTKPointData()] = dcvtk2
     outfiles = vtk_save(vtkfile)
@@ -222,7 +222,63 @@ function saveresultVTK(betpar,mpost)
     return 
 end
 
-############################################
+####################################################
+
+function plotbindisotherm(betamix,protcon,dobs,xyobs,statpts,inflpts,freeSDS,Nbound)
+
+    N = 1000
+    x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
+
+    ##-------------------------------------
+    figure(figsize=(12,10))
+    
+    subplot(211)
+    title("Observed data")
+    scatter(xyobs[:,1],xyobs[:,2],c=dobs,cmap=PyPlot.get_cmap("rainbow"))
+    colorbar()
+    xlabel("SDS concentration [mM]")
+    ylabel("Protein concentration [mM]")    
+
+    ny = length(protcon)
+    for i in 1:ny
+        for z in 1:length(statpts[i])
+            plot(statpts[i][z],protcon[i],"or")
+            text(statpts[i][z],protcon[i],string(z),color="red")
+        end
+        
+        for z in 1:length(inflpts[i])
+            plot(inflpts[i][z],protcon[i],"ob")
+            text(inflpts[i][z],protcon[i],string(z),color="blue")
+        end
+    end
+
+    nlines = length(freeSDS)
+    for i=1:nlines
+        ## totSDS = freeSDS + Nbound * protc
+        # y = angcoe.*x .+ intercept
+        # x = (-intercept .+ 0)./angcoe
+        ypl = (1.0/Nbound[i]).*x .+ (-freeSDS[i]/Nbound[i])
+        plot(x,ypl,"-k",linewidth=0.5)
+    end
+
+    xlim([betamix.betpar.a-0.5,betamix.betpar.b-2.5])
+    ylim([betamix.betpar.ymin-0.01,betamix.betpar.ymax+0.01])
+
+    ##
+    ## totSDS = freeSDS + Nbound * protc
+    ##
+    subplot(212)
+    title("Binding isotherm")
+    plot(freeSDS,Nbound,"o-")
+    xlabel("free SDS conc. [mM]")
+    ylabel("Nbound")
+
+    tight_layout()
+    
+    return
+end
+
+#########################################################
 
 ## Makie plot    
 #scene = Scene(resolution = (500, 500))
