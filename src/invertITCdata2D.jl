@@ -11,8 +11,6 @@ struct ScaledBeta2DParams
     konfuny::String 
     "type of function on y for the amplitude"
     ampfuny::String 
-    # "sample points at (x,y)"
-    # xy::Array{<:Real,2}
     "lower bound for Beta function (along x)"
     a::Real
     "upper bound for Beta function (along y)"
@@ -59,9 +57,19 @@ end
 
 ###########################################################
 
+Base.@kwdef struct ITCObsData
+    enthalpy::Vector{<:Real}
+    idxdata::Vector{UnitRange{Int64}}
+    sdsprotcon::Array{<:Real,2}
+    protein::String
+end
+
+###########################################################
+
 struct BetaMix2D
     betpar::ScaledBeta2DParams
     modkonamp::Matrix{<:Real}
+    protein::String
 end
   
 ##############################################################
@@ -96,14 +104,15 @@ end
 
 ######################################################################
 
-function misfitbeta2D(betpar::ScaledBeta2DParams,xy::Array{<:Real,2},dobs::Vector{<:Real},
+function misfitbeta2D(betpar::ScaledBeta2DParams,dobs::ITCObsData,
                       invCd::Matrix{<:Real},mcur::Matrix{<:Real})
     
     # compute synthetic data
-    dcalc = forwmod2D(betpar,xy,mcur)
+    # xy = dobs.sdsprotcon
+    dcalc = forwmod2D(betpar,dobs.sdsprotcon,mcur)
 
     # calculate likelihood value
-    difcalobs = dcalc.-dobs
+    difcalobs = dcalc.-dobs.enthalpy
     tmp1 = invCd * difcalobs
     misflkl = 0.5 * dot(difcalobs,tmp1)
 
@@ -251,7 +260,7 @@ end
 """
     Interior Point Newton method from the Optim.jl package.
 """
-function solveinvprob(protein::String,betpar::ScaledBeta2DParams,xy::Array{<:Real},dobs::Vector{<:Real},
+function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
                       invCd::Matrix{<:Real},mstart::Matrix{<:Real},
                       lowconstr::Vector{<:Real},upconstr::Vector{<:Real},
                       outdir::String)  
@@ -289,7 +298,7 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,xy::Array{<:Rea
     
     function closmisfitOPTIM(clmcur::Vector{<:Real})
         clmcur2d=reshape(clmcur,betpar.nummodpar,ncomp)
-        msf = misfitbeta2D(betpar,xy,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
+        msf = misfitbeta2D(betpar,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
         return msf
     end
 
@@ -332,7 +341,7 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,xy::Array{<:Rea
 
     ## structure holding Beta parameters and the solution in terms of
     ##   mode, confidence parameter and amplitude
-    betmix = BetaMix2D(betpar,mpost)
+    betmix = BetaMix2D(betpar,mpost,dobs.protein)
 
     ## show some info
     println(result)
@@ -345,15 +354,15 @@ function solveinvprob(protein::String,betpar::ScaledBeta2DParams,xy::Array{<:Rea
         nothing
     end
 
-    outfile = joinpath(outdir,protein*"_ITCresults.h5")
+    outfile = joinpath(outdir,dobs.protein*"_ITCresults.h5")
     println("Saving results to $outfile\n")
 
     hf = h5open(outfile,"w")
-    hf["protein"] = protein
+    hf["protein"] = dobs.protein
     hf["mpost"] = mpost
-    hf["dobs"] = dobs
-    hf["sdscon"] = xy[:,1] # sdscon
-    hf["procon"] = xy[:,2] # procon
+    hf["enthalpy"] = dobs.enthalpy
+    hf["sdscon"] = dobs.sdsprotcon[:,1] # sdscon
+    hf["procon"] = dobs.sdsprotcon[:,2] # procon
     hf["beta_a"] = betpar.a
     hf["beta_b"] = betpar.b
     hf["beta_ymin"] = betpar.ymax

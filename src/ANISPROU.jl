@@ -17,7 +17,7 @@ using Optim
 using PyPlot 
 using WriteVTK 
 
-export ScaledBeta2DParams,BetaMix2D
+export ScaledBeta2DParams,BetaMix2D,ITCObsData
 export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults
@@ -26,7 +26,8 @@ export findcurvefeatures
 export calcfreeSDSNbound
 export freeboundsds_singlebeta,freeboundsds_betamix
 export area_betamix,volume_betamix
-export plotbindisotherm,plotfoundfeatures
+export plotsingleexperiments,plotbindisotherm_singlebetas
+export plotbindisotherm_betamix,plotfoundfeatures
 
 
 include("readITCdata.jl")

@@ -11,10 +11,16 @@ function launchall()
     ## do the fitting of data with Beta functions
     inpdir="inputdata/"
     protein = "IM7"
-    betamix,xy,dobs = invertITCdata(inpdir,protein)
+    betamix,dobs = invertITCdata(inpdir,protein)
 
-    ## construct binding isotherm using selected amplitude points
-    sdsfNbou = bindingisotherm_singlebetas(protein,xy,betamix)
+    ## plot fit to single experiments
+    plotsingleexperiments(dobs,betamix)
+
+    ## construct binding isotherm for Beta mix using stationary and inflection points
+    freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
+    
+    ## construct binding isotherm for each Beta function using selected amplitude points
+    sdsfNbou_singlebetas = bindingisotherm_singlebetas(dobs,betamix)
     
     ## compute area for all Beta components at
     ##   requested protein concentration
@@ -29,45 +35,104 @@ function launchall()
     volume,errvol = volume_betamix(betamix,minprotcon,maxprotcon)
     println("\nVolume for all component: $volume\n")
 
-    return betamix  #mpost,betpar,dobs,area,sdsfNbou,volume
+    return betamix #,freeSDS,Nbound
 end
 
 ###########################################################
 
-function bindingisotherm_singlebetas(protein::String,xy::Array{<:Real},betamix::BetaMix2D)
+function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
+      
+    ##===========================================
+    ## Find stationary and inflection points
+    ny = 4 
+    protcon = collect(LinRange(betamix.betpar.ymin,betamix.betpar.ymax,ny))
+    statpts,inflpts = findcurvefeatures(betamix,dobs.sdsprotcon,protcon)
 
-    betpar = betamix.betpar
-    mcur = betamix.modkonamp
+    # plot found points/features
+    outdir = "figs"
+    plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
 
-    ncomp = size(mcur,2)
-    sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
+    
+    ##===========================================
+    ## Selection of local minima and maxima
+    locminmax = Vector{Array{<:Real,2}}(undef,0)
+    
+    push!(locminmax, [ statpts[1][2] protcon[1];
+                       statpts[2][2] protcon[2];
+                       statpts[3][2] protcon[3];
+                       statpts[4][2] protcon[4] ] )
+    
+    push!(locminmax, [ statpts[2][3] protcon[2];
+                       statpts[3][3] protcon[3];
+                       statpts[4][3] protcon[4] ] )
 
-    ## number of sampling points along x, i.e., [SDS]
-    nxpts = 5
+    # push!(locminmax, [ statpts[2][4] protcon[2];
+    #                    statpts[3][4] protcon[3];
+    #                    statpts[4][4] protcon[4] ] )
 
-    ## loop on all Beta functions (components)
-    for ico=1:ncomp
+    # push!(locminmax, [ statpts[1][3] protcon[1];
+    #                    statpts[2][5] protcon[2];
+    #                    statpts[3][5] protcon[3];
+    #                    statpts[4][5] protcon[4] ] )
 
-        ## define custom amplitude ratios values for each component
-        if ico in [1,3,4]
-            # ampratios = collect(LinRange(0.3,1.0,6))
-            ampratios = (collect(LinRange(0.4,1.0,nxpts))).^(1/2)
-        elseif ico==2
-            ampratios = (collect(LinRange(0.8,1.0,nxpts))).^(1/2)
-        end
+    push!(locminmax, [ statpts[1][4] protcon[1];
+                       statpts[2][6] protcon[2];
+                       statpts[3][6] protcon[3];
+                       statpts[4][6] protcon[4] ] )
 
-        ## calculate intercept and angular coefficient, i.e., [SDS]_free and N_bound
-        sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mcur[:,ico],ampratios=ampratios)
 
-    end
+    ##===========================================
+    ## Selection of inflection points
+    inflectionpts = Vector{Array{<:Real,2}}(undef,0)
+    
+    push!(inflectionpts, [ inflpts[1][2] protcon[1];
+                          inflpts[2][2] protcon[2];
+                          inflpts[3][2] protcon[3];
+                          inflpts[4][2] protcon[4] ] )
+    
+    push!(inflectionpts, [ inflpts[1][3] protcon[1];
+                           inflpts[2][3] protcon[2];
+                           inflpts[3][3] protcon[3];
+                           inflpts[4][3] protcon[4] ] )
 
-    ## plot results
-    plotbindingisotherm(protein,betpar,xy,mcur,sdsfNbou,"figs",Npts=100)
+    push!(inflectionpts, [ inflpts[1][4] protcon[1];
+                           inflpts[2][4] protcon[2];
+                           inflpts[3][4] protcon[3];
+                           inflpts[4][4] protcon[4] ] )
+    
+    push!(inflectionpts, [ inflpts[1][5] protcon[1];
+                           inflpts[2][5] protcon[2];
+                           inflpts[3][5] protcon[3];
+                           inflpts[4][5] protcon[4] ] )
 
-    return sdsfNbou
+    push!(inflectionpts, [ inflpts[1][6] protcon[1];
+                           inflpts[2][6] protcon[2];
+                           inflpts[3][6] protcon[3];
+                           inflpts[4][8] protcon[4] ] )
+
+    push!(inflectionpts, [ inflpts[1][7] protcon[1];
+                           inflpts[2][7] protcon[2];
+                           inflpts[3][7] protcon[3];
+                           inflpts[4][9] protcon[4] ] )
+
+
+    ##===========================================
+    ## Linear regression to get the parameters of straight lines
+
+    ## find the straight line by least squares
+    lstlines = [locminmax..., inflectionpts...]
+
+    freeSDS,Nbound = calcfreeSDSNbound(lstlines)
+
+    ##===========================================
+    ## Plot stuff
+    outdir = "figs"
+    plotbindisotherm_betamix(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir)
+
+    return freeSDS,Nbound
 end
 
-######################################################################
+##########################################################
 
 function invertITCdata(inpdir::String,protein::String)
 
@@ -75,23 +140,28 @@ function invertITCdata(inpdir::String,protein::String)
     ## read data
     ## data = readallexperiments("inputdata/",["IM7","FN3","sFN3"])
     data = readallexperiments(inpdir,[protein])
-    
+    @show data[protein]["idxdata"]
+
     #protein = "FN3" # "IM7" "FN3" "sFN3"
     sdscon = data[protein]["sdscon"]
     procon = data[protein]["procon"]
-    enout  = data[protein]["enout"] 
+    enthalpy = data[protein]["enout"] 
+    idxdata = data[protein]["idxdata"]
 
-    dobs = enout
+    ## x axis is SDS concentration, y axis is protein concentration
+    ## xy = [sdscon procon]
+    
+    dobs = ITCObsData(protein=protein,enthalpy=enthalpy,idxdata=idxdata,
+                      sdsprotcon=[sdscon procon])
 
     ##=========================
     ## forward test
-    a = minimum(sdscon) # lower bound for beta domain
-    b = 1.2*maximum(sdscon) # upper bound for beta domain
+    a = minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
+    b = 1.2*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
-    minprotcon = minimum(procon) 
-    maxprotcon = maximum(procon)
-    # x axis is SDS concentration, y axis is protein concentration
-    xy = [sdscon procon] 
+    minprotcon = minimum(dobs.sdsprotcon[:,2]) 
+    maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
+
 
     ## define the parameters of Beta 2D functions
     modefuny = "linear"
@@ -153,7 +223,7 @@ function invertITCdata(inpdir::String,protein::String)
     ############################################
     if onlytestinitialguess==true
         # Visualize initial guess
-        plotinitialguess(protein,betpar,dobs,mstart)
+        plotinitialguess(betpar,dobs,mstart)
 
         ## stop here when testing initial models
         return nothing
@@ -172,22 +242,59 @@ function invertITCdata(inpdir::String,protein::String)
 
     ###############################################
     ## run the Newton optimization
-    nobs = length(dobs)
+    nobs = length(dobs.enthalpy)
     stdobs = 2.0 .* ones(nobs)
     invCd = inv(diagm(stdobs.^2))
 
     ## IPNewton from Optim.jl, box constraints
     outdir = "output"
-    betamix = solveinvprob(protein,betpar,xy,dobs,invCd,mstart,lowconstr,upconstr,outdir)
+    betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
  
     ##================================
     ## plot results
     outdir = "figs"
-    plotresults(protein,betamix.betpar,xy,dobs,mstart,betamix.modkonamp,outdir)
+    plotresults(betamix.betpar,dobs,mstart,betamix.modkonamp,outdir)
 
-    return betamix,xy,dobs
+    return betamix,dobs
 end
 
 ######################################################################
 
+function bindingisotherm_singlebetas(dobs::ITCObsData,betamix::BetaMix2D)
+
+    betpar = betamix.betpar
+    mcur = betamix.modkonamp
+    xy = dobs.sdsprotcon
+    protein = betamix.protein
+
+    ncomp = size(mcur,2)
+    sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
+
+    ## number of sampling points along x, i.e., [SDS]
+    nxpts = 5
+
+    ## loop on all Beta functions (components)
+    for ico=1:ncomp
+
+        ## define custom amplitude ratios values for each component
+        if ico in [1,3,4]
+            # ampratios = collect(LinRange(0.3,1.0,6))
+            ampratios = (collect(LinRange(0.4,1.0,nxpts))).^(1/2)
+        elseif ico==2
+            ampratios = (collect(LinRange(0.8,1.0,nxpts))).^(1/2)
+        end
+
+        ## calculate intercept and angular coefficient, i.e., [SDS]_free and N_bound
+        sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mcur[:,ico],ampratios=ampratios)
+
+    end
+
+    ## plot results
+    outdir="figs"
+    plotbindisotherm_singlebetas(protein,betpar,dobs.sdsprotcon,mcur,sdsfNbou,outdir,Npts=100)
+
+    return sdsfNbou
+end
+
+######################################################################
 

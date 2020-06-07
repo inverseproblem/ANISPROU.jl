@@ -7,6 +7,7 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String})
     numprot = length(proteinnames)
 
     data = Dict()
+    
 
     for p=1:numprot
 
@@ -14,23 +15,29 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String})
         data[proteinnames[p]]["sdscon"] = Float64[]
         data[proteinnames[p]]["procon"] = Float64[]
         data[proteinnames[p]]["enout"] = Float64[]
+        data[proteinnames[p]]["idxdata"] = UnitRange{Int64}[]
 
         sdscon = data[proteinnames[p]]["sdscon"]
         procon = data[proteinnames[p]]["procon"]
         enout = data[proteinnames[p]]["enout"]
+        idxdata = data[proteinnames[p]]["idxdata"] 
 
         # get a list of files in inpdir
         fllist = readdir(joinpath(inpdir,proteinnames[p]))
         # select only files starting with
         checkfile(x) = (startswith(x,proteinnames[p]) && endswith(x,"uM.txt"))
         fllist = filter(checkfile,fllist)
-        @show fllist
 
+        startind = 1
         for fl in fllist
             csds1,cpro1,ceout1 = readsingleexperiment(joinpath(inpdir,proteinnames[p]*"/"*fl))
+            lendata = length(ceout1)
             push!(sdscon,csds1...)
             push!(procon,cpro1...)
             push!(enout,ceout1...)
+            @show startind:(startind+lendata-1),lendata
+            push!(idxdata,startind:(startind+lendata-1))
+            startind += lendata
         end
 
     end

@@ -1,24 +1,25 @@
 
 ################################################################
 
-function plotinitialguess(protein,betpar,xy,dobs,mstart)
+function plotinitialguess(betpar,dobs,mstart)
     
     dcalcstart = forwmod2D(betpar,xy,mstart)
-    sdscon = xy[:,1]
-    procon = xy[:,2]
-    
+    sdscon = dobs.sdsprotcon[:,1]
+    procon = dobs.sdsprotcon[:,2]
+    protein = dobs.protein
+
     #lenm = length(mstart)
     nummodparam = size(mstart,1) #betpar.nummodpar
     #ncomp = size(mstart,2) #div(lenm,nummodparam)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
     figure(figsize=(12,5))
-    suptitle("Observed data and initial guess")
+    #suptitle("Observed data and initial guess")
 
     subplot(121)
     title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dobs,cmap=PyPlot.get_cmap("rainbow"))
+    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")    
@@ -39,13 +40,14 @@ end
 
 ############################################
 
-function plotresults(protein,betpar,xy,dobs,mstart,mpost,outdir)
+function plotresults(betpar,dobs,mstart,mpost,outdir)
 
-    dcalcstart = forwmod2D(betpar,xy,mstart)
-    dcalccur = forwmod2D(betpar,xy,mpost)
-    sdscon = xy[:,1]
-    procon = xy[:,2]
-    
+    dcalcstart = forwmod2D(betpar,dobs.sdsprotcon,mstart)
+    dcalccur = forwmod2D(betpar,dobs.sdsprotcon,mpost)
+    sdscon = dobs.sdsprotcon[:,1]
+    procon = dobs.sdsprotcon[:,2]
+    protein = dobs.protein
+
     ##==============================
     ## show data
     lenm = length(mstart)
@@ -58,7 +60,7 @@ function plotresults(protein,betpar,xy,dobs,mstart,mpost,outdir)
     subplot(231)
     title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dobs,cmap=PyPlot.get_cmap("rainbow"))
+    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
@@ -94,7 +96,7 @@ function plotresults(protein,betpar,xy,dobs,mstart,mpost,outdir)
     subplot(235)
     title("dcalc-dobs")
     #tricontour(sdscon,procon,dcalccur,cmap=PyPlot.get_cmap("rainbow"))
-    dcmo = dcalccur-dobs
+    dcmo = dcalccur-dobs.enthalpy
     vmax = maximum(abs.(dcmo))
     scatter(sdscon,procon,c=dcmo,vmin=-vmax,vmax=vmax,cmap=PyPlot.get_cmap("RdBu"))
     colorbar()
@@ -106,7 +108,7 @@ function plotresults(protein,betpar,xy,dobs,mstart,mpost,outdir)
     subplot(236)
     title("dcalc vs. dobs")
     plot(dcalcstart,"--",label="dcalc mstart",linewidth=0.8)
-    plot(dobs,"-k",label="dobs")
+    plot(dobs.enthalpy,"-k",label="dobs")
     plot(dcalccur,"-r",label="dcalc mpost")
     legend()
 
@@ -152,14 +154,16 @@ end
 
 ############################################
 
-function plotbindingisotherm(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
+function plotbindisotherm_singlebetas(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
 
     dcalc = forwmod2D(betpar,xy,mpost)    
     sdscon = xy[:,1]
     procon = xy[:,2]
     
     figure(figsize=(13,5))
+    
     subplot(121)
+    title("Protein $protein fitted lines on given amplitude ratios")
     scatter(sdscon,procon,c=dcalc,cmap=PyPlot.get_cmap("rainbow"))
     colorbar()
     xlabel("SDS concentration [mM]")
@@ -186,6 +190,7 @@ function plotbindingisotherm(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
     plotmodelines(betpar,mpost,"")
 
     subplot(122)
+    title("Protein $protein: binding isotherm from individual Beta functions")
     for ico=1:length(sdsfNb)
         plot(sdsfNb[ico][:,1],sdsfNb[ico][:,2],"o-")
     end
@@ -194,13 +199,13 @@ function plotbindingisotherm(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
 
     tight_layout()
 
-    savefig(joinpath(outdir,protein*"_binding-isotherm.pdf"))
+    savefig(joinpath(outdir,protein*"_bind-isoth_singlebetas.pdf"))
     return nothing
 end
 
 ######################################################################
 
-function saveresultVTK(betpar,mpost)
+function saveresultVTK(protein,betpar,mpost)
 
     ## VTK stuff
     Nx=500
@@ -224,8 +229,10 @@ end
 
 ####################################################
 
-function plotbindisotherm(betamix,protcon,dobs,xyobs,statpts,inflpts,freeSDS,Nbound)
+function plotbindisotherm_betamix(betamix,protcon,dobs,statpts,inflpts,
+                                  freeSDS,Nbound,outdir)
 
+    protein = betamix.protein
     N = 1000
     x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
 
@@ -233,8 +240,8 @@ function plotbindisotherm(betamix,protcon,dobs,xyobs,statpts,inflpts,freeSDS,Nbo
     figure(figsize=(12,10))
     
     subplot(211)
-    title("Observed data")
-    scatter(xyobs[:,1],xyobs[:,2],c=dobs,cmap=PyPlot.get_cmap("rainbow"))
+    title("Protein $protein: binding isotherm from stationary points of Beta mix")
+    scatter(dobs.sdsprotcon[:,1],dobs.sdsprotcon[:,2],c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
     colorbar()
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")    
@@ -274,11 +281,82 @@ function plotbindisotherm(betamix,protcon,dobs,xyobs,statpts,inflpts,freeSDS,Nbo
     ylabel("Nbound")
 
     tight_layout()
-    
+    savefig(joinpath(outdir,protein*"_bind-isoth_betamix.pdf"))
     return
 end
 
 #########################################################
+
+function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
+    
+    protein = betamix.protein
+    N = 1000
+    x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
+    ny = length(protcon)
+
+    function fwd1ptxy(xpt::Real,ypt::Real)
+        xy = hcat(xpt,ypt)
+        out = ANISPROU.forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+        return out[1] 
+    end
+
+    figure(figsize=(12,6))
+    title("Protein $protein: stationary and inflection points")
+    for i in 1:ny
+        y = [protcon[i] for _ in 1:N]
+        slbet = fwd1ptxy.(x,y)
+        plot(x,slbet,label="betamix at prot. conc. $(round(y[1],digits=4)) ")
+        
+        plot(statpts[i],fwd1ptxy.(statpts[i],protcon[i]),"or")
+        for z in 1:length(statpts[i])
+            text(statpts[i][z],fwd1ptxy.(statpts[i][z],protcon[i]),
+                 string(z),color="red")
+        end
+        
+        plot(inflpts[i],fwd1ptxy.(inflpts[i],protcon[i]),"ob")
+        for z in 1:length(inflpts[i])
+            text(inflpts[i][z],fwd1ptxy.(inflpts[i][z],protcon[i]),
+                 string(z),color="blue")
+        end
+    end
+    legend()
+    tight_layout()
+    savefig(joinpath(outdir,protein*"_foundfeatures_betamix.pdf"))
+
+    return
+end
+
+#####################################################
+
+function plotsingleexperiments(dobs,betamix) #; expernumber=nothing)
+
+    nexper = length(dobs.idxdata)
+    obsdata = dobs.enthalpy
+    protein = betamix.protein
+
+    for i in 1:nexper
+
+        idx = dobs.idxdata[i]
+        xy = dobs.sdsprotcon[idx,:]
+        dcalc = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+
+        obsexper = dobs.enthalpy[idx]
+
+        figure()
+        title("Protein: $protein, initial concentration: $(xy[1,2])")
+        plot(xy[:,1],obsexper,"o-",label="measured data")
+        plot(xy[:,1],dcalc,"o-",label="calculated data")
+        legend()
+        xlabel("SDS concentration [mM]")
+        ylabel("Enthalpy")
+        tight_layout()
+
+    end
+
+    return
+end
+
+#####################################################
 
 ## Makie plot    
 #scene = Scene(resolution = (500, 500))
