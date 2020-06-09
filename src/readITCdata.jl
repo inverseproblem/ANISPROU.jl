@@ -2,6 +2,12 @@
 
 ###########################################################
 
+"""
+$TYPEDSIGNATURE)
+
+Real from ASCII files all observed/measured data from a set of experiments.
+It can read data for one or more proteins.
+"""
 function readallexperiments(inpdir::String,proteinnames::Vector{String})
 
     numprot = length(proteinnames)
@@ -47,6 +53,11 @@ end
 
 ###########################################################
 
+"""
+$TYPEDSIGNATURE)
+
+Real from ASCII file the observed/measured data from an experiment.
+"""
 function readsingleexperiment(singlefl::String)
     ## Only column 3 (Xt), 4 (Mt) and 6 (NDH) are relevant
     #

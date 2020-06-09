@@ -46,7 +46,7 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     ## Find stationary and inflection points
     ny = 4 
     protcon = collect(LinRange(betamix.betpar.ymin,betamix.betpar.ymax,ny))
-    statpts,inflpts = findcurvefeatures(betamix,dobs.sdsprotcon,protcon)
+    statpts,inflpts = findcurvefeatures(betamix,protcon)
 
     # plot found points/features
     outdir = "figs"

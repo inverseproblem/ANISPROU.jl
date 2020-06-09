@@ -1,7 +1,16 @@
 
 
 ###############################################
+"""
+$(TYPEDEF)
 
+Structure containing the parameters of the 2D Beta functions.
+
+# Fields 
+
+$(TYPEDFIELDS)
+
+"""
 struct ScaledBeta2DParams
     "number of model parameters"
     nummodpar::Integer
@@ -57,15 +66,39 @@ end
 
 ###########################################################
 
+"""
+$(TYPEDEF)
+
+Structure containing the observed (measured) data, i.e. the enthalpy, the protein and SDS concentration.
+
+# Fields 
+
+$(TYPEDFIELDS)
+
+"""
 Base.@kwdef struct ITCObsData
+    "Enthalpy values"
     enthalpy::Vector{<:Real}
+    "Indices pointing to single experiments data"
     idxdata::Vector{UnitRange{Int64}}
+    "Concentration of SDS (first column) and protein (second column)"
     sdsprotcon::Array{<:Real,2}
+    "Name of the protein"
     protein::String
 end
 
 ###########################################################
 
+"""
+$(TYPEDEF)
+
+Structure containing the observed (measured) data, i.e. the enthalpy, the protein and SDS concentration.
+
+# Fields 
+
+$(TYPEDFIELDS)
+
+"""
 struct BetaMix2D
     betpar::ScaledBeta2DParams
     modkonamp::Matrix{<:Real}
@@ -74,6 +107,11 @@ end
   
 ##############################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Set the constraints for the Newton optimization.
+"""
 function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
                         lowc::Vector{<:Real},upc::Vector{<:Real})
 
@@ -104,6 +142,11 @@ end
 
 ######################################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Calculate misfit between observed/measured and calculated data.
+"""
 function misfitbeta2D(betpar::ScaledBeta2DParams,dobs::ITCObsData,
                       invCd::Matrix{<:Real},mcur::Matrix{<:Real})
     
@@ -124,6 +167,12 @@ end
 
 ###########################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Compute the forward response for given input parameters, i.e. the enthalpy 
+ values (2D) for given Beta functions (2D) parameters.
+"""
 function forwmod2D(betpar::ScaledBeta2DParams,xy::Array{<:Real,2},mcur::Matrix{<:Real})
                    
     npts = size(xy,1)
@@ -144,7 +193,9 @@ end
 ###########################################################
 
 """
-  2-Dfied scaled Beta function for given x and y locations.
+ $(TYPEDSIGNATURES)
+
+  2D-fied scaled Beta function for given x (SDS concentration) and y (protein concentration) values.
 """
 function singlescaledbeta2D(betpar::ScaledBeta2DParams,xy::Array{<:Real,2},mcur::Vector{<:Real})
 
@@ -170,6 +221,11 @@ end
 
 ###########################################################
 
+"""
+ $(TYPEDSIGNATURES)
+
+Get the parameters (mode, confidence, amplitude) of the Beta functions for given y (protein concentration).
+"""
 function getmodparbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},ycur::Real)
 
     ##-------------------------------------------
@@ -218,6 +274,11 @@ end
 
 ###########################################################
 
+"""
+ $(TYPEDSIGNATURES)
+
+1D modified scaled Beta function.
+"""
 @inline function scaledbeta(mo::Real,kon::Real,a::Real,b::Real,
                             amplscale::Real,x::Real)
     
@@ -258,7 +319,23 @@ end
 ###############################################################################
 
 """
-    Interior Point Newton method from the Optim.jl package.
+$(TYPEDSIGNATURES)
+
+Solve the inverse problem, i.e., fit the measured enthalpy data,
+   using an Interior Point Newton method from the Optim.jl package.
+
+# Arguments
+
+- `betpar`: a struct containing the parameters for the Beta functions
+            See [`ScaledBeta2DParams`](@ref)
+- `dobs`: a struct containing the observed (measured) data and concentrations
+            See [`ITCObsData`](@ref)
+- `invCd`: inverse of the covariance matrix on observations (precision matrix)
+- `mstart`: the starting model
+- `lowconstr`: lower constraints
+- `upconstr`: upper constraints
+- `outdir`: output directory to save results
+
 """
 function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
                       invCd::Matrix{<:Real},mstart::Matrix{<:Real},

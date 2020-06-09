@@ -1,6 +1,10 @@
 
 ####################################################
+"""
+$(TYPEDSIGNATURES)
 
+Least squares linear regression.
+"""
 function lssqregr(points)
     
     ## G = [protc ones(length(protc))]
@@ -48,8 +52,13 @@ end
 
 ####################################################
 
-function findcurvefeatures(betamix::BetaMix2D,xy::Array{<:Real,2},
-                           protcon::Vector{<:Real})
+"""
+$(TYPEDSIGNATURES)
+
+Define a set of features on the Beta mix to subsequently compute the binding isotherm.
+It uses the stationary and inflection points at given protein concentrations (protcon). 
+"""
+function findcurvefeatures(betamix::BetaMix2D,protcon::Vector{<:Real})
     
     function fwd1ptxy(xpt::Real,ypt::Real)
         xy = hcat(xpt,ypt)
@@ -81,6 +90,12 @@ end
 ##################################################################
 ##################################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Define a set of features on a single individual Beta function to subsequently compute the binding isotherm.
+It uses a ratio of amplitude compared to maximum amplitude (ampratios).
+"""
 function freeboundsds_singlebeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real} ;
                                  ampratios::Union{Vector{<:Real},Nothing}=nothing,
                                  nptsprot::Integer=10)

@@ -2,6 +2,11 @@
 
 ###########################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Calculate the area of the mix of Beta functions for a given protein concentration.
+"""
 function area_betamix(betamix::BetaMix2D,protcon::Real)
 
     ##-------------------------------------------------
@@ -40,6 +45,11 @@ end
 
 ###########################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Calculate the volume of the mix of Beta functions within given bounds of protein concentration.
+"""
 function volume_betamix(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real)
 
     ##---------------------------------------------------

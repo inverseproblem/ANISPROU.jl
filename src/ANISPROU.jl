@@ -3,6 +3,16 @@
 # Copyright (c) 2020 Andrea Zunino
 #
 
+
+"""
+ANISPROU
+
+Analysis of isothermal titration calorimetry (ITC) data on sodium dodecyl sulphate (SDS) mediated protein unfolding.
+
+# Exports
+
+$(EXPORTS)
+"""
 module ANISPROU
 
 using DelimitedFiles
@@ -15,7 +25,8 @@ using Roots
 using Cubature
 using Optim
 using PyPlot 
-using WriteVTK 
+using WriteVTK
+using DocStringExtensions
 
 export ScaledBeta2DParams,BetaMix2D,ITCObsData
 export readallexperiments
