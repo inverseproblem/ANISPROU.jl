@@ -1,7 +1,7 @@
 
 #using Makie,AbstractPlotting
 
-function plotsurface3D(dobs,betamix ; yscal=100.0, zscal=0.01, markersize=350px)
+function plotsurface3D(dobs,betamix ; yscal=100.0, zscal=0.01, markersize=350Makie.px)
 
     println("\nPlotting 3D surface from Beta mix and measured data as circles.")
     println(" Scaling factors are $yscal for [$(dobs.protein)] and $zscal for enthalpy.")
@@ -50,12 +50,12 @@ function plotsurface3D(dobs,betamix ; yscal=100.0, zscal=0.01, markersize=350px)
     #Makie.wireframe!(scene,xv,yscal*yv,zscal*dcalc,overdraw = true, transparency = true, color = (:black, 0.1))
     Makie.scatter!(scene,xobs,yscal*yobs,zscal*zobs,color=:black,markersize=markersize)
 
-    axis = scene[Axis] # get axis
+    axis = scene[Makie.Axis] # get axis
     axis[:names, :axisnames] = ("[SDS]","[$(dobs.protein)]x$yscal","Enthalpy x $zscal")
 
     #Makie.scale!(scene,1,yscal,zscal)
-    center!(scene)
-    #display(scene)
+    Makie.center!(scene)
+    Makie.display(scene)
     #Makie.save("surfaceplot.png", scene)
 
     return scene

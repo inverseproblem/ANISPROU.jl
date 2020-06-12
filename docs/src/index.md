@@ -71,7 +71,7 @@ Now we need to define a so-called starting model, i.e., a set of parameters for 
 ```math
  y = \dfrac{(y_2-y_1)}{(x_2-x_1)} (x-x_1) + y_1
 ``` 
- where ``y_1``, ``y_2``, ``x_1`` and  ``x_2`` are given as explained in the following. ``y_1``, ``y_2``, ``x_1`` and  ``x_2`` represent the value of the Beta parameters at the minimum and maximum protein concentration specified in the structure [`ScaledBeta2DParams`](@ref).
+ where ``y_1``, ``y_2``, ``x_1`` and  ``x_2`` are given as explained in the following. ``x_1`` and  ``x_2`` represent the value of the Beta parameters at the minimum and maximum protein concentration ``y_1`` and ``y_2`` specified in the structure [`ScaledBeta2DParams`](@ref), called `ymin` and `ymax`.
  Then the elements of the column vector represent the following:
 - elements 1 and 2: value of the mode at the two points where the protein concentration equals `betpar.ymin` `betpar.ymax`, part of the structure [`ScaledBeta2DParams`](@ref)
 - elements 3 and 4: value of the confidence parameter at the two points where the protein concentration equals `betpar.ymin` `betpar.ymax`, part of the structure [`ScaledBeta2DParams`](@ref)

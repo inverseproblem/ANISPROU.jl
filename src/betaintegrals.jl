@@ -28,11 +28,13 @@ function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0
     ## Define a new ScaledBeta2DParams with the new units
     betpar_inp = deepcopy(betamix.betpar)
     betpar_scal = ScaledBeta2DParams(modefuny=betpar_inp.modefuny,konfuny=betpar_inp.konfuny,
-                                    nampfuny=betpar_inp.ampfuny,a=a*scalfact,b=b*scalfact,
-                                    ymin=betpar_inp.minprotcon,ymax=betpar_inp.maxprotcon)
+                                     ampfuny=betpar_inp.ampfuny,a=betpar_inp.a*scalfact,b=betpar_inp.b*scalfact,
+                                     ymin=betpar_inp.ymin,ymax=betpar_inp.ymax)
     
     ## Define a new BetaMix2D with the new units
-    modkonamp_scal = copy(betamix.modkonamp).*scalfact
+    modkonamp_scal = copy(betamix.modkonamp)
+    # scale the mode in terms of SDS concentration:
+    modkonamp_scal[1:2,:] .*= scalfact
     betamix_scal = BetaMix2D(betpar_scal,modkonamp_scal,betamix.protein)
     ##------------------------------------
 
@@ -95,11 +97,13 @@ function volume_enthalpy(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real ; 
     ## Define a new ScaledBeta2DParams with the new units
     betpar_inp = deepcopy(betamix.betpar)
     betpar_scal = ScaledBeta2DParams(modefuny=betpar_inp.modefuny,konfuny=betpar_inp.konfuny,
-                                     nampfuny=betpar_inp.ampfuny,a=a*scalfact,b=b*scalfact,
-                                     ymin=betpar_inp.minprotcon,ymax=betpar_inp.maxprotcon)
+                                     ampfuny=betpar_inp.ampfuny,a=betpar_inp.a*scalfact,b=betpar_inp.b*scalfact,
+                                     ymin=betpar_inp.ymin,ymax=betpar_inp.ymax)
     
     ## Define a new BetaMix2D with the new units
-    modkonamp_scal = copy(betamix.modkonamp).*scalfact
+    modkonamp_scal = copy(betamix.modkonamp)
+    # scale the mode in terms of SDS concentration:
+    modkonamp_scal[1:2,:] .*= scalfact
     betamix_scal = BetaMix2D(betpar_scal,modkonamp_scal,betamix.protein)
     ##------------------------------------
 
@@ -119,7 +123,7 @@ function volume_enthalpy(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real ; 
     ##---------------------------------------------------------
     # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
     #                     reltol=1e-8, abstol=0, maxevals=0)
-    bp = betamix_scal.bp
+    bp = betamix_scal.betpar
     xmin = [bp.a,minprotcon]
     xmax = [bp.b,maxprotcon]
 

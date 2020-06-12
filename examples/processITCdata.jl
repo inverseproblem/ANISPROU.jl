@@ -13,8 +13,11 @@ function launchall()
     protein = "IM7"
     betamix,dobs = invertITCdata(inpdir,protein)
 
-#ANISPROU.plotsurface3D(dobs,betamix)
-return   betamix,dobs   
+    # plot 3D surface from results
+    if  isdefined(@__MODULE__,:Makie)
+        plotsurface3D(dobs,betamix)
+    end
+
     ## plot fit to single experiments
     plotsingleexperiments(dobs,betamix)
 
@@ -37,7 +40,7 @@ return   betamix,dobs
     volume,errvol = volume_enthalpy(betamix,minprotcon,maxprotcon)
     println("\nVolume within bounds for each component: $volume, error $errvol\n")
 
-    return betamix #,freeSDS,Nbound
+    return betamix,dobs #,freeSDS,Nbound
 end
 
 ###########################################################
