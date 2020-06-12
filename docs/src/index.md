@@ -116,7 +116,7 @@ In order to solve the inverse problem we need a covariance matrix (symmetric pos
 ```@example procITC
 using LinearAlgebra
 nobs = length(dobs.enthalpy)
-stdobs = 2.0 .* ones(nobs) # standard deviation of the error on measured data
+stdobs = 0.01 .* ones(nobs) # standard deviation of the error on measured data
 invCd = inv(diagm(stdobs.^2)) # in this case a diagonal precision matrix
 nothing # hide
 ```
