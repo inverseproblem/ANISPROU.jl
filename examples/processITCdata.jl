@@ -19,7 +19,8 @@ function launchall()
     end
 
     ## plot fit to single experiments
-    plotsingleexperiments(dobs,betamix)
+    outdir="figs"
+    plotsingleexperiments(dobs,betamix,outdir)
 
     ## construct binding isotherm for Beta mix using stationary and inflection points
     freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
@@ -145,7 +146,6 @@ function invertITCdata(inpdir::String,protein::String)
     ## read data
     ## data = readallexperiments("inputdata/",["IM7","FN3","sFN3"])
     data = readallexperiments(inpdir,[protein])
-    @show data[protein]["idxdata"]
 
     #protein = "FN3" # "IM7" "FN3" "sFN3"
     sdscon = data[protein]["sdscon"]
@@ -162,7 +162,7 @@ function invertITCdata(inpdir::String,protein::String)
     ##=========================
     ## forward test
     a = minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
-    b = 1.2*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
+    b = maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
     minprotcon = minimum(dobs.sdsprotcon[:,2]) 
     maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
@@ -192,32 +192,32 @@ function invertITCdata(inpdir::String,protein::String)
         ##  Just add (remove) rows to increase (decrease) the number of components
         ## Elements are: 2 for mode, 2 for the confidence parameter and
         ##   2 for the amplitude parameter
-        comp1 = [0.37, 2.5,  50.0, 30.0, -500.0, -1250.0]
-        comp2 = [1.4,  4.8,  60.0, 40.0, -500.0,  -800.0]
-        comp3 = [4.5,  10.0, 100.0, 80.0,   30.0,    40.0]
-        comp4 = [6.0,  15.0,  80.0, 50.0, -400.0,  -500.0]
+        comp1 = [0.37, 2.5,  50.0, 30.0, -2.092,  -5.23 ] #  -500.0, -1250.0]
+        comp2 = [1.4,  4.8,  60.0, 40.0, -2.092,  -3.3472 ] #  -500.0,  -800.0]
+        comp3 = [4.5,  10.0, 100.0, 80.0, 0.12552, 0.16736 ] # 30.0,    40.0]
+        comp4 = [6.0,  15.0, 130.0, 50.0, -1.6736, -2.092 ]    # -400.0,  -500.0]
 
-    elseif protein=="FN3"
-        ## starting model FN3
-        ## Each row is one component (one 2D Beta function)
-        ##  Just add (remove) rows to increase (decrease) the number of components
-        ## Elements are: 2 for mode, 2 for the confidence parameter and
-        ##   2 for the amplitude parameter
-        comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
-        comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
-        comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
-        comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
+    # elseif protein=="FN3"
+    #     ## starting model FN3
+    #     ## Each row is one component (one 2D Beta function)
+    #     ##  Just add (remove) rows to increase (decrease) the number of components
+    #     ## Elements are: 2 for mode, 2 for the confidence parameter and
+    #     ##   2 for the amplitude parameter
+    #     comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
+    #     comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
+    #     comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
+    #     comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
 
-    elseif protein=="sFN3"
-        ## starting model sFN3
-        ## Each row is one component (one 2D Beta function)
-        ##  Just add (remove) rows to increase (decrease) the number of components
-        ## Elements are: 2 for mode, 2 for the confidence parameter and
-        ##   2 for the amplitude parameter
-        comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
-        comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
-        comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
-        comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
+    # elseif protein=="sFN3"
+    #     ## starting model sFN3
+    #     ## Each row is one component (one 2D Beta function)
+    #     ##  Just add (remove) rows to increase (decrease) the number of components
+    #     ## Elements are: 2 for mode, 2 for the confidence parameter and
+    #     ##   2 for the amplitude parameter
+    #     comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
+    #     comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
+    #     comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
+    #     comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
 
     end
 
@@ -239,16 +239,17 @@ function invertITCdata(inpdir::String,protein::String)
     ## Elements are: 2 for mode, 2 for the confidence parameter and
     ##   2 for the amplitude parameter
     ## lower constraints 
-    lowc = [betpar.a,  betpar.a, 2.0, 2.0, -2000.0, -2000.0]
+    lowc = [betpar.a,  betpar.a, 2.0, 2.0, -10.0, -10.0]
     ## upper constraints
-    upc  = [betpar.b, betpar.b, 500.0, 500.0, 2000.0, 2000.0]
+    upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
 
     lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 
     ###############################################
     ## run the Newton optimization
     nobs = length(dobs.enthalpy)
-    stdobs = 2.0 .* ones(nobs)
+    stdobs = 0.01 .* ones(nobs)   #2.0 .* ones(nobs)
+    @show stdobs[1]
     invCd = inv(diagm(stdobs.^2))
 
     ## IPNewton from Optim.jl, box constraints

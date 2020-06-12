@@ -7,13 +7,26 @@ $(TYPEDSIGNATURES)
 
 Real from ASCII files all observed/measured data from a set of experiments.
 It can read data for one or more proteins.
+The entalphy values are *scaled* by a factor given by the argument `scalfactor`, 
+ which defaults to 0.004184 (Cal/mol to kJ/mol).
+
+# Arguments 
+
+-`inpdir`: directory containing the input data
+-`proteinnames`: array of strings containing the names of proteins
+-`scalfactor`=0.004184: scaling factor for enthalpy, defaults 
+                        to 0.004184 (Cal/mol to kJ/mol)
+
 """
-function readallexperiments(inpdir::String,proteinnames::Vector{String})
+function readallexperiments(inpdir::String,proteinnames::Vector{String} ;
+                            scalfactor::Float64=0.004184)
+    ## swith units, from Cal/mol to kJ/mol by multiplying by 0.004184
+
+    println("Reading data from directory: $inpdir")
+    println(" Scaling enthalpy values by a factor $scalfactor")
 
     numprot = length(proteinnames)
-
-    data = Dict()
-    
+    data = Dict()    
 
     for p=1:numprot
 
@@ -44,6 +57,9 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String})
             push!(idxdata,startind:(startind+lendata-1))
             startind += lendata
         end
+
+        ## scale enthalpy
+        enout .*= scalfactor
 
     end
 

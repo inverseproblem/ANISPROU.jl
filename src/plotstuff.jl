@@ -25,21 +25,21 @@ function plotinitialguess(betpar,dobs,mstart)
     title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
     scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")    
-    plotmodelines(betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"start. m.")
 
     subplot(122)
-    title("dcalc start")
+    title("Calculated data from starting model")
     #tricontour(sdscon,procon,dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
     scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"start. m.")
    
-    #tight_layout()
+    tight_layout()
     return
 end
 
@@ -50,7 +50,6 @@ $(TYPEDSIGNATURES)
 Plot the results of inverting the ITC data to fit the enthalpy function in 2D.
 """
 function plotresults(betamix,dobs,mstart,outdir)
-
 
     mpost = betamix.modkonamp
     betpar = betamix.betpar
@@ -73,55 +72,55 @@ function plotresults(betamix,dobs,mstart,outdir)
     title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
     scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    xlim([-2,betpar.b])
-    ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+    # xlim([-2,betpar.b])
+    # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     #plotmodelines(betpar,mpost,"mpost")
     
     subplot(232)
-    title("dcalc start")
+    title("Calculated data from starting model")
     #tricontour(sdscon,procon,dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
     scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(betpar,mstart,"mstart")
+    plotmodelines(betpar,mstart,"start. m.")
 
     subplot(233)
-    title("model parameters")
-    plot(vec(mstart),".-",label="mstart")
-    plot(vec(mpost),".-",label="mpost")
+    title("Model parameters")
+    plot(vec(mstart),".-",label="starting model")
+    plot(vec(mpost),".-",label="posterior model")
     legend()
 
     subplot(234)
-    title("dcalc mpost")
+    title("Calculated data from posterior model")
     #tricontour(sdscon,procon,dcalccur,cmap=PyPlot.get_cmap("rainbow"))
     scatter(sdscon,procon,c=dcalccur,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(betpar,mpost,"mpost")    
+    plotmodelines(betpar,mpost,"post. m.")    
     
     
     subplot(235)
-    title("dcalc-dobs")
+    title("Calculated minus observed data")
     #tricontour(sdscon,procon,dcalccur,cmap=PyPlot.get_cmap("rainbow"))
     dcmo = dcalccur-dobs.enthalpy
     vmax = maximum(abs.(dcmo))
     scatter(sdscon,procon,c=dcmo,vmin=-vmax,vmax=vmax,cmap=PyPlot.get_cmap("RdBu"))
-    colorbar()
+    colorbar(label="ΔEnthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    xlim([-2,betpar.b])
-    ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+    # xlim([-2,betpar.b])
+    # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     
     subplot(236)
-    title("dcalc vs. dobs")
-    plot(dcalcstart,"--",label="dcalc mstart",linewidth=0.8)
-    plot(dobs.enthalpy,"-k",label="dobs")
-    plot(dcalccur,"-r",label="dcalc mpost")
+    title("Calculated vs. observed data")
+    plot(dcalcstart,"--",label="calc. data from start. mod.",linewidth=0.8)
+    plot(dobs.enthalpy,"-k",label="observed data")
+    plot(dcalccur,"-r",label="calc. data from post. mod.")
     legend()
 
     # subplot(235)
@@ -165,8 +164,8 @@ function plotmodelines(betpar,mcur,modname)
         end
     end
     legend()
-    xlim([-2,betpar.b])
-    ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+    # xlim([-2,betpar.b])
+    # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
 end
 
 #####################################################
@@ -273,7 +272,7 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
     subplot(211)
     title("Protein $protein: binding isotherm from stationary points of Beta mix")
     scatter(dobs.sdsprotcon[:,1],dobs.sdsprotcon[:,2],c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
+    colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")    
 
@@ -299,16 +298,16 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
         plot(x,ypl,"-k",linewidth=0.5)
     end
 
-    xlim([betamix.betpar.a-0.5,betamix.betpar.b-2.5])
-    ylim([betamix.betpar.ymin-0.01,betamix.betpar.ymax+0.01])
+    # xlim([betamix.betpar.a,betamix.betpar.b])
+    ylim([0.92*betamix.betpar.ymin,1.05betamix.betpar.ymax])
 
     ##
     ## totSDS = freeSDS + Nbound * protc
     ##
     subplot(212)
-    title("Binding isotherm")
+    title("Binding isotherm for protein $protein")
     plot(freeSDS,Nbound,"o-")
-    xlabel("free SDS conc. [mM]")
+    xlabel("free SDS concentration [mM]")
     ylabel("Nbound")
 
     tight_layout()
@@ -356,9 +355,11 @@ function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
         end
     end
     legend()
+    xlabel("SDS concentration [mM]")
+    ylabel("Enthalpy [kJ/mol]")
     tight_layout()
+    
     savefig(joinpath(outdir,protein*"_foundfeatures_betamix.pdf"))
-
     return
 end
 
@@ -369,29 +370,35 @@ $(TYPEDSIGNATURES)
 
 Plot each single experiments, i.e., enthalpy for an initial protein concentration and increasing SDS concentration, comparing measured and calculate data (from results of inversion).
 """
-function plotsingleexperiments(dobs,betamix) #; expernumber=nothing)
+function plotsingleexperiments(dobs,betamix,outdir) #; expernumber=nothing)
 
     nexper = length(dobs.idxdata)
     obsdata = dobs.enthalpy
     protein = betamix.protein
+    ncomp = size(betamix.modkonamp,2)
 
     for i in 1:nexper
 
         idx = dobs.idxdata[i]
         xy = dobs.sdsprotcon[idx,:]
-        dcalc = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
-
+       
+        dcalcall = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
         obsexper = dobs.enthalpy[idx]
 
-        figure()
+        figure(figsize=(12,6.4))
         title("Protein: $protein, initial concentration: $(xy[1,2])")
-        plot(xy[:,1],obsexper,"o-",label="measured data")
-        plot(xy[:,1],dcalc,"o-",label="calculated data")
+        plot(xy[:,1],obsexper,".-r",linewidth=2,label="measured data")
+        plot(xy[:,1],dcalcall,".-k",linewidth=2,label="calculated data")
+        for c=1:ncomp
+            dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
+            plot(xy[:,1],dcalc1,".--",linewidth=0.5,markersize=0.5,label="Beta comp. $c")
+        end
         legend()
         xlabel("SDS concentration [mM]")
-        ylabel("Enthalpy")
+        ylabel("Enthalpy [kJ/mol")
         tight_layout()
 
+        savefig(joinpath(outdir,protein*"_experiment$(i).pdf"))
     end
 
     return

@@ -81,10 +81,10 @@ In the following we create a starting model use 4 Beta components. To add more (
 ```@example procITC
 # Elements are: 2 for mode, 2 for the confidence parameter and
 #   2 for the amplitude parameter
-comp1 = [0.37, 2.5,  50.0, 30.0, -500.0, -1250.0]
-comp2 = [1.4,  4.8,  60.0, 40.0, -500.0,  -800.0]
-comp3 = [4.5,  10.0, 100.0, 80.0,   30.0,    40.0]
-comp4 = [6.0,  15.0,  80.0, 50.0, -400.0,  -500.0]
+comp1 = [0.37, 2.5,   50.0, 30.0, -2.092,  -5.23]
+comp2 = [1.4,  4.8,   60.0, 40.0, -2.092,  -3.3472]
+comp3 = [4.5,  10.0, 100.0, 80.0,  0.12552, 0.16736]
+comp4 = [6.0,  15.0,  80.0, 130.0, -1.6736, -2.092]
 
 # mstart is a 2D array where each column represents one component
 mstart = [comp1 comp2 comp3 comp4]
@@ -107,8 +107,8 @@ The solution of the inverse problem, that is, finding the set of model parameter
 
 First, we need to set the constraints for the Newton optimization. That is done by specifying the lower and upper bounds for each parameter and and passing it to the function [`setconstraints`](@ref), as shown in the following:
 ```@example procITC
-lowc = [betpar.a,  betpar.a, 2.0, 2.0, -2000.0, -2000.0] # lower constraints 
-upc  = [betpar.b, betpar.b, 500.0, 500.0, 2000.0, 2000.0] # upper constraints
+lowc = [betpar.a, betpar.a, 2.0, 2.0, -10.0, -10.0] # lower constraints 
+upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0] # upper constraints
 lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 nothing # hide
 ```
@@ -133,14 +133,31 @@ Finally, it is possible to visualize the results as following:
 ```@example procITC
 outdir = "figs"
 plotresults(betamix,dobs,mstart,outdir)
-savefig("plotresults.svg") # hide
+savefig(outdir*"/IM7_results.svg") # hide
 nothing # hide
 ```
-![](plotresults.svg)
+![](figs/IM7_results.svg)
+
+The function [`plotsingleexperiments`](@ref) provides a way to show the fit of the solution to the single experiments, i.e., enthalpy for different initial protein concentrations. 
+```@example procITC
+# plot fit to single experiments
+outdir="figs"
+plotsingleexperiments(dobs,betamix,outdir)
+savefig(outdir*"/IM7_experiment1.svg") # hide
+nothing # hide
+```
+![](figs/IM7_experiment1.svg)
 
 ### Plot the 3D surface vs. observed data
 
-
+In case the package `Makie` is installed, it is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
+```@example procITC
+using Makie
+scene=plotsurface3D(dobs,betamix)
+Makie.save("figs/surfaceplot.png", scene) # hide
+nothing # hide
+```
+![](figs/surfaceplot.png)
 
 
 ## Estimation of the binding isotherm

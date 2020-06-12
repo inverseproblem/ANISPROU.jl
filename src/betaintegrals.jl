@@ -80,7 +80,7 @@ arguments.
             the modes, confidence parameters and amplitudes and protein name
 -`minprotcon`: lower bound of protein concentration value (y axis) to perform the integral
 -`maxprotcon`: upper bound of protein concentration value (y axis) to perform the integral
--`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+-`volumescal`=203.0: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
 function volume_enthalpy(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real ; volumescal::Real=203.0)

@@ -1,7 +1,12 @@
 
 #using Makie,AbstractPlotting
 
-function plotsurface3D(dobs,betamix ; yscal=100.0, zscal=0.01, markersize=350Makie.px)
+"""
+$(TYPEDSIGNATURES)
+
+Plot the a 3D surface from the Beta mix together measured data as circles.
+"""
+function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.px)
 
     println("\nPlotting 3D surface from Beta mix and measured data as circles.")
     println(" Scaling factors are $yscal for [$(dobs.protein)] and $zscal for enthalpy.")
