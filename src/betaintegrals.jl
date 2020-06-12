@@ -1,39 +1,59 @@
 
-
 ###########################################################
 
 """
 $(TYPEDSIGNATURES)
 
-Calculate the area of the mix of Beta functions for a given protein concentration.
-"""
-function area_betamix(betamix::BetaMix2D,protcon::Real)
+Calculate the area of each individual Beta function for a given protein concentration. 
+The SDS concentration axis needs a unit conversion which is handled by the `volumescal` 
+arguments.
 
-    ##-------------------------------------------------
-    ## betaval(x::Real) = scaledbeta(mode,kon,abeta,bbeta,amp,x)
+# Arguments
+
+-`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+            the modes, confidence parameters and amplitudes and protein name
+-`protcon`: protein concentration value (y axis) at which to perform the calculation of the area
+-`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+               is 203.0μl.
+"""
+function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0)
+
+    @assert betamix.betpar.ymin<=protcon<=betamix.betpar.ymax
+        
+    # scale the SDS concentration from mM to mole 10^(-3)*203*10^(-6) =2.03*10^(-7).
+    # the 203 µl is specific for certain instruments
+    scalfact = volumescal*10^(-9)
 
     ##------------------------------------
-    ncomp=size(betamix.modkonamp,2)
+    ## Define a new ScaledBeta2DParams with the new units
+    betpar_inp = deepcopy(betamix.betpar)
+    betpar_scal = ScaledBeta2DParams(modefuny=betpar_inp.modefuny,konfuny=betpar_inp.konfuny,
+                                    nampfuny=betpar_inp.ampfuny,a=a*scalfact,b=b*scalfact,
+                                    ymin=betpar_inp.minprotcon,ymax=betpar_inp.maxprotcon)
+    
+    ## Define a new BetaMix2D with the new units
+    modkonamp_scal = copy(betamix.modkonamp).*scalfact
+    betamix_scal = BetaMix2D(betpar_scal,modkonamp_scal,betamix.protein)
+    ##------------------------------------
+
+    ncomp = size(betamix_scal.modkonamp,2)
     integr = zeros(ncomp)
     err = zeros(ncomp)
     for c=1:ncomp
 
-        betpar = betamix.betpar
-        mcur = betamix.modkonamp[:,c]
+        ## betamix_scal  _scal!!!
+        bp = betamix_scal.betpar
+        mcur = betamix_scal.modkonamp[:,c]
 
-        @assert length(mcur)==betpar.nummodpar
-        
-        ## get the values of model parameters at y=ycur
-        mode,kon,amp = getmodparbeta(betpar,mcur,protcon)
-
+        @assert length(mcur)==bp.nummodpar
+    
         ##---------------------------------------------------------
         # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
         #                     reltol=1e-8, abstol=0, maxevals=0)
-        abeta = betpar.a
-        bbeta = betpar.b
-        yval = protcon
+        abeta = bp.a
+        bbeta = bp.b
         ## get the values of model parameters at y=ycur
-        mode,kon,amp = getmodparbeta(betpar,mcur,yval)
+        mode,kon,amp = getmodparbeta(bp,mcur,protcon)
 
         integr[c],err[c] = hquadrature(x->scaledbeta(mode,kon,abeta,bbeta,amp,x),abeta,bbeta,
                                        reltol=1e-8,abstol=0,maxevals=0)
@@ -48,40 +68,73 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Calculate the volume of the mix of Beta functions within given bounds of protein concentration.
+Calculate the volume of each single Beta function within given bounds of protein concentration.
+The SDS concentration axis needs a unit conversion which is handled by the `volumescal` 
+arguments.
+
+# Arguments
+
+-`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+            the modes, confidence parameters and amplitudes and protein name
+-`minprotcon`: lower bound of protein concentration value (y axis) to perform the integral
+-`maxprotcon`: upper bound of protein concentration value (y axis) to perform the integral
+-`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+               is 203.0μl.
 """
-function volume_betamix(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real)
+function volume_enthalpy(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real ; volumescal::Real=203.0)
+
+    @assert betamix.betpar.ymin<=minprotcon<=betamix.betpar.ymax
+    @assert betamix.betpar.ymin<=maxprotcon<=betamix.betpar.ymax
+    @assert minprotcon<maxprotcon
+
+    # scale the SDS concentration from mM to mole 10^(-3)*203*10^(-6) =2.03*10^(-7).
+    # the 203 µl is specific for certain instruments
+    scalfact = volumescal*10^(-9)
+
+    ##------------------------------------
+    ## Define a new ScaledBeta2DParams with the new units
+    betpar_inp = deepcopy(betamix.betpar)
+    betpar_scal = ScaledBeta2DParams(modefuny=betpar_inp.modefuny,konfuny=betpar_inp.konfuny,
+                                     nampfuny=betpar_inp.ampfuny,a=a*scalfact,b=b*scalfact,
+                                     ymin=betpar_inp.minprotcon,ymax=betpar_inp.maxprotcon)
+    
+    ## Define a new BetaMix2D with the new units
+    modkonamp_scal = copy(betamix.modkonamp).*scalfact
+    betamix_scal = BetaMix2D(betpar_scal,modkonamp_scal,betamix.protein)
+    ##------------------------------------
+
 
     ##---------------------------------------------------
     function betaval(xy::Vector{<:Real})::Real
         ## get the values of model parameters at y=ycur
         x=xy[1]
         y=xy[2]
-        mode,kon,amp = getmodparbeta(betpar,mcur,y)
+        mode,kon,amp = getmodparbeta(bp,mcur,y)
         ## calculate value of beta function
-        bval = scaledbeta(mode,kon,betpar.a,betpar.b,amp,x)
+        bval = scaledbeta(mode,kon,bp.a,bp.b,amp,x)
         return bval 
     end
     ##---------------------------------------------------
-  
+    
     ##---------------------------------------------------------
     # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
     #                     reltol=1e-8, abstol=0, maxevals=0)
-    betpar = betamix.betpar
-    xmin = [betpar.a,minprotcon]
-    xmax = [betpar.b,maxprotcon]
+    bp = betamix_scal.bp
+    xmin = [bp.a,minprotcon]
+    xmax = [bp.b,maxprotcon]
 
-    ncomp = size(betamix.modkonamp,2)
+    ncomp = size(betamix_scal.modkonamp,2)
     integr = zeros(ncomp)
     err = zeros(ncomp)
     mcur=nothing # given the closure of betaval() and the private scope of for loop
     for c=1:ncomp
-        mcur = betamix.modkonamp[:,c]
-        integr[c],err[c] = hcubature(betaval,xmin,xmax,
-                                     reltol=1e-8,abstol=0,maxevals=0)
+        mcur = betamix_scal.modkonamp[:,c]
+        integr[c],err[c] = hcubature(betaval,xmin,xmax,reltol=1e-8,abstol=0,maxevals=0)
     end
 
     return integr,err
 end
 
-###########################################################
+
+############################################################
+

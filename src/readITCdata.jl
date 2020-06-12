@@ -3,7 +3,7 @@
 ###########################################################
 
 """
-$TYPEDSIGNATURE)
+$(TYPEDSIGNATURES)
 
 Real from ASCII files all observed/measured data from a set of experiments.
 It can read data for one or more proteins.
@@ -41,7 +41,6 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String})
             push!(sdscon,csds1...)
             push!(procon,cpro1...)
             push!(enout,ceout1...)
-            @show startind:(startind+lendata-1),lendata
             push!(idxdata,startind:(startind+lendata-1))
             startind += lendata
         end
@@ -54,7 +53,7 @@ end
 ###########################################################
 
 """
-$TYPEDSIGNATURE)
+$(TYPEDSIGNATURES)
 
 Real from ASCII file the observed/measured data from an experiment.
 """

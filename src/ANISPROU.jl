@@ -27,24 +27,36 @@ using Optim
 using PyPlot 
 using WriteVTK
 using DocStringExtensions
+using Requires
 
 export ScaledBeta2DParams,BetaMix2D,ITCObsData
 export readallexperiments
 export setconstraints,solveinvprob
 export plotinitialguess,plotresults
+export plotsingleexperiments
 export saveresultVTK
 export findcurvefeatures
 export calcfreeSDSNbound
-export freeboundsds_singlebeta,freeboundsds_betamix
-export area_betamix,volume_betamix
-export plotsingleexperiments,plotbindisotherm_singlebetas
-export plotbindisotherm_betamix,plotfoundfeatures
-
+export area_enthalpy,volume_enthalpy 
+export plotbindisotherm,plotfoundfeatures
 
 include("readITCdata.jl")
 include("invertITCdata2D.jl")
 include("betaintegrals.jl")
 include("bindingisotherm.jl")
 include("plotstuff.jl")
+
+# 3D plotting
+function __init__()
+    @require Makie="ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"  begin
+        # @require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
+        import .Makie
+        include("plot3d.jl")
+        export plotsurface3D
+       # end
+    end
+end
+
+
 
 end # module

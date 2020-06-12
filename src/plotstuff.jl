@@ -1,9 +1,13 @@
 
 ################################################################
+"""
+$(TYPEDSIGNATURES)
 
+Plot the fit to the enthalpy data as a result of the initial guess, i.e., the starting model parameters of the Beta functions.
+"""
 function plotinitialguess(betpar,dobs,mstart)
     
-    dcalcstart = forwmod2D(betpar,xy,mstart)
+    dcalcstart = forwmod2D(betpar,dobs.sdsprotcon,mstart)
     sdscon = dobs.sdsprotcon[:,1]
     procon = dobs.sdsprotcon[:,2]
     protein = dobs.protein
@@ -39,9 +43,16 @@ function plotinitialguess(betpar,dobs,mstart)
 end
 
 ############################################
+"""
+$(TYPEDSIGNATURES)
 
-function plotresults(betpar,dobs,mstart,mpost,outdir)
+Plot the results of inverting the ITC data to fit the enthalpy function in 2D.
+"""
+function plotresults(betamix,dobs,mstart,outdir)
 
+
+    mpost = betamix.modkonamp
+    betpar = betamix.betpar
     dcalcstart = forwmod2D(betpar,dobs.sdsprotcon,mstart)
     dcalccur = forwmod2D(betpar,dobs.sdsprotcon,mpost)
     sdscon = dobs.sdsprotcon[:,1]
@@ -131,6 +142,11 @@ end
 
 ############################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Plot the lines defined by the modes.
+"""
 function plotmodelines(betpar,mcur,modname)
     Npoints = 40
     ncomp = size(mcur,2)
@@ -152,59 +168,69 @@ function plotmodelines(betpar,mcur,modname)
     ylim([0.9*betpar.ymin,1.05*betpar.ymax])
 end
 
-############################################
+#####################################################
 
-function plotbindisotherm_singlebetas(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
+# """
+# $(TYPEDSIGNATURES)
 
-    dcalc = forwmod2D(betpar,xy,mpost)    
-    sdscon = xy[:,1]
-    procon = xy[:,2]
+# Plot the results of binding isotherm calculations using the individual Beta functions.
+# """
+# function plotbindisotherm_singlebetas(protein,betpar,xy,mpost,sdsfNb,outdir; Npts=100)
+
+#     dcalc = forwmod2D(betpar,xy,mpost)    
+#     sdscon = xy[:,1]
+#     procon = xy[:,2]
     
-    figure(figsize=(13,5))
+#     figure(figsize=(13,5))
     
-    subplot(121)
-    title("Protein $protein fitted lines on given amplitude ratios")
-    scatter(sdscon,procon,c=dcalc,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar()
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
-    ##
-    ##  y = m*x + y0
-    ##
-    ## One line per row
-    ##N = 100
-    firstplot=true
-    for ico=1:length(sdsfNb)
-        for r=1:size(sdsfNb[ico],1)
-            x = collect(LinRange(betpar.ymin,betpar.ymax,Npts))
-            y = sdsfNb[ico][r,2].*x .+ sdsfNb[ico][r,1]
-            if firstplot
-                plot(y,x,"--r",linewidth=0.7,label="selected fitted amplitudes")
-                firstplot = false
-            else
-                plot(y,x,"--r",linewidth=0.7)
-            end
-        end
-    end
+#     subplot(121)
+#     title("Protein $protein fitted lines on given amplitude ratios")
+#     scatter(sdscon,procon,c=dcalc,cmap=PyPlot.get_cmap("rainbow"))
+#     colorbar()
+#     xlabel("SDS concentration [mM]")
+#     ylabel("Protein concentration [mM]")
+#     ##
+#     ##  y = m*x + y0
+#     ##
+#     ## One line per row
+#     ##N = 100
+#     firstplot=true
+#     for ico=1:length(sdsfNb)
+#         for r=1:size(sdsfNb[ico],1)
+#             x = collect(LinRange(betpar.ymin,betpar.ymax,Npts))
+#             y = sdsfNb[ico][r,2].*x .+ sdsfNb[ico][r,1]
+#             if firstplot
+#                 plot(y,x,"--r",linewidth=0.7,label="selected fitted amplitudes")
+#                 firstplot = false
+#             else
+#                 plot(y,x,"--r",linewidth=0.7)
+#             end
+#         end
+#     end
 
-    plotmodelines(betpar,mpost,"")
+#     plotmodelines(betpar,mpost,"")
 
-    subplot(122)
-    title("Protein $protein: binding isotherm from individual Beta functions")
-    for ico=1:length(sdsfNb)
-        plot(sdsfNb[ico][:,1],sdsfNb[ico][:,2],"o-")
-    end
-    xlabel("free SDS conc. [mM]")
-    ylabel("Nbound")
+#     subplot(122)
+#     title("Protein $protein: binding isotherm from individual Beta functions")
+#     for ico=1:length(sdsfNb)
+#         plot(sdsfNb[ico][:,1],sdsfNb[ico][:,2],"o-")
+#     end
+#     xlabel("free SDS conc. [mM]")
+#     ylabel("Nbound")
 
-    tight_layout()
+#     tight_layout()
 
-    savefig(joinpath(outdir,protein*"_bind-isoth_singlebetas.pdf"))
-    return nothing
-end
+#     savefig(joinpath(outdir,protein*"_bind-isoth_singlebetas.pdf"))
+#     return nothing
+# end
 
 ######################################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Save the fitting surface in the VTK format for Paraview.
+"""
 function saveresultVTK(protein,betpar,mpost)
 
     ## VTK stuff
@@ -228,9 +254,13 @@ function saveresultVTK(protein,betpar,mpost)
 end
 
 ####################################################
+"""
+$(TYPEDSIGNATURES)
 
-function plotbindisotherm_betamix(betamix,protcon,dobs,statpts,inflpts,
-                                  freeSDS,Nbound,outdir)
+Plot the results of binding isotherm calculations using the Beta mix, i.e., sum of all Beta fitting functions.
+"""
+function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
+                          freeSDS,Nbound,outdir)
 
     protein = betamix.protein
     N = 1000
@@ -287,6 +317,11 @@ end
 
 #########################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Plot the points/features defined on the enthalpy curves to find the binding isotherm.
+"""
 function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
     
     protein = betamix.protein
@@ -328,6 +363,11 @@ end
 
 #####################################################
 
+"""
+$(TYPEDSIGNATURES)
+
+Plot each single experiments, i.e., enthalpy for an initial protein concentration and increasing SDS concentration, comparing measured and calculate data (from results of inversion).
+"""
 function plotsingleexperiments(dobs,betamix) #; expernumber=nothing)
 
     nexper = length(dobs.idxdata)
@@ -357,9 +397,3 @@ function plotsingleexperiments(dobs,betamix) #; expernumber=nothing)
 end
 
 #####################################################
-
-## Makie plot    
-#scene = Scene(resolution = (500, 500))
-# scene=Makie.surface(xvtk,100*yvtk,0.01*dcvtk2,colormap = Reverse(:amp))
-# wireframe!(scene,xvtk,100*yvtk,0.01*dcvtk2,overdraw = true, transparency = true, color = (:black, 0.1))
-# display(scene)

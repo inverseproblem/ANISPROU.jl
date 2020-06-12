@@ -13,27 +13,29 @@ function launchall()
     protein = "IM7"
     betamix,dobs = invertITCdata(inpdir,protein)
 
+#ANISPROU.plotsurface3D(dobs,betamix)
+return   betamix,dobs   
     ## plot fit to single experiments
     plotsingleexperiments(dobs,betamix)
 
     ## construct binding isotherm for Beta mix using stationary and inflection points
     freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
     
-    ## construct binding isotherm for each Beta function using selected amplitude points
-    sdsfNbou_singlebetas = bindingisotherm_singlebetas(dobs,betamix)
+    # ## construct binding isotherm for each Beta function using selected amplitude points
+    # sdsfNbou_singlebetas = bindingisotherm_singlebetas(dobs,betamix)
     
     ## compute area for all Beta components at
     ##   requested protein concentration
     protcon = 0.08
-    area,errarea = area_betamix(betamix,protcon)
-    println("\nArea for all components: $area\n")
+    area,errarea = area_enthalpy(betamix,protcon)
+    println("\nArea at protein concentration $protcon for each component: $area, error $errarea\n")
 
     ## compute volume for all Beta components within
     ##   requested bounds of protein concentration
     minprotcon = betamix.betpar.ymin
     maxprotcon = betamix.betpar.ymax
-    volume,errvol = volume_betamix(betamix,minprotcon,maxprotcon)
-    println("\nVolume for all component: $volume\n")
+    volume,errvol = volume_enthalpy(betamix,minprotcon,maxprotcon)
+    println("\nVolume within bounds for each component: $volume, error $errvol\n")
 
     return betamix #,freeSDS,Nbound
 end
@@ -55,7 +57,7 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     
     ##===========================================
     ## Selection of local minima and maxima
-    locminmax = Vector{Array{<:Real,2}}(undef,0)
+    locminmax = [] ##Vector{Array{<:Real,2}}(undef,0)
     
     push!(locminmax, [ statpts[1][2] protcon[1];
                        statpts[2][2] protcon[2];
@@ -83,7 +85,7 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
 
     ##===========================================
     ## Selection of inflection points
-    inflectionpts = Vector{Array{<:Real,2}}(undef,0)
+    inflectionpts = [] ##Vector{Array{<:Real,2}}(undef,0)
     
     push!(inflectionpts, [ inflpts[1][2] protcon[1];
                           inflpts[2][2] protcon[2];
@@ -127,7 +129,7 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     ##===========================================
     ## Plot stuff
     outdir = "figs"
-    plotbindisotherm_betamix(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir)
+    plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir)
 
     return freeSDS,Nbound
 end
@@ -253,7 +255,7 @@ function invertITCdata(inpdir::String,protein::String)
     ##================================
     ## plot results
     outdir = "figs"
-    plotresults(betamix.betpar,dobs,mstart,betamix.modkonamp,outdir)
+    plotresults(betamix,dobs,mstart,outdir)
 
     return betamix,dobs
 end

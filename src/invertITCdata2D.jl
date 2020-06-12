@@ -14,19 +14,19 @@ $(TYPEDFIELDS)
 struct ScaledBeta2DParams
     "number of model parameters"
     nummodpar::Integer
-    "type of function on y for the mode"
+    "type of function on y (protein concentration) for the mode"
     modefuny::String 
-    "type of function on y for the confidence parameter"
+    "type of function on y (protein concentration) for the confidence parameter"
     konfuny::String 
-    "type of function on y for the amplitude"
+    "type of function on y (protein concentration) for the amplitude"
     ampfuny::String 
-    "lower bound for Beta function (along x)"
+    "lower bound for Beta function (along x, i.e. SDS concentration)"
     a::Real
-    "upper bound for Beta function (along y)"
+    "upper bound for Beta function (along y, i.e. protein concentration)"
     b::Real
-    "user defined minimum y"
+    "user defined minimum y (protein concentration)"
     ymin::Real
-    "user defined maximum y"
+    "user defined maximum y (protein concentration)"
     ymax::Real
     "starting index in the vector of model parameters for mode"
     idxmode::Integer
@@ -121,7 +121,7 @@ function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
     lowconstr = zeros(betpar.nummodpar,ncomp)
     upconstr = zeros(betpar.nummodpar,ncomp)
 
-    @show size(lowc),size(upc)
+    #@show size(lowc),size(upc)
     for c=1:ncomp
         #c1 = (c-1)*betpar.nummodpar
         for i=1:betpar.nummodpar
@@ -130,8 +130,8 @@ function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
         end
     end
     
-    @show mstart.<=lowconstr
-    @show mstart.>=upconstr
+    # @show mstart.<=lowconstr
+    # @show mstart.>=upconstr
 
     ## check mstart...
     @assert all(mstart.>=lowconstr)
@@ -396,6 +396,12 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     end
  
     ##===================================================
+    ## Some checks
+    @assert issymmetric(invCd)
+    @assert isposdef(invCd)
+
+    
+    ##===================================================
     ## https://julianlsolvers.github.io/Optim.jl/stable/#examples/generated/ipnewton_basics/
     
     ## 2d -> 1D
@@ -459,118 +465,3 @@ end
 
 ########################################################################
 ########################################################################
-
-# function solveNewton2D(betpar::ScaledBeta2DParams,dobs::Vector{<:Real},
-#                        invCd::Matrix{<:Real},mstart2d::Matrix{<:Real},
-#                        niter::Integer,newtonstep::Real)
-
-#     #------------------------------------------------
-    
-#     function closmisfitOPTIM(clmcur::Vector{<:Real})
-#         msf = misfitbeta2D(betpar,dobs,invCd,clmcur) #invCm,mprior,mcur)
-#         return msf
-#     end
-
-#     #------------------------------------------------
-
-#     mstart = vec(mstart2d)
-
-#     @assert newtonstep>0.0
-
-#     doplot =false
-
-#     mcur = copy(mstart)
-#     mall = zeros(length(mcur),niter)
-#     misfall = zeros(niter+1)
-#     misfall[1] = misfitbeta2D(betpar,dobs,invCd,mcur)
-#     println("Initial misfit: $(misfall[1]) ")
-#     print("Newton step factor: $newtonstep ")
-
-
-#     if doplot
-#         figure()
-#         subplot(223)
-#         title("model parameters")
-#         plot(mcur,".-",label="mcur")
-#         legend()
-#     end
-
-
-#     for it=1:niter
-#         print("\nNewton iteration #$it     ")
-
-#         ## gradient of the misfit function
-#         grad = ForwardDiff.gradient(closmisfit,mcur)
-
-#         ## Hessian matrix
-#         hess = ForwardDiff.hessian(closmisfit,mcur)
-
-#         ##---------------------------------
-#         ## 1. solve the linear system
-#         # H p = -g
-#         # Ax = y
-#         # x = A\y
-        
-#         ## check positive definitess of Hessian
-#         # pdhess = isposdef(hess)
-#         # print("isposdef(Hessian): $(pdhess)")
-
-#         # if !pdhess
-#             ## Hessian is not positive definite,
-#             ##   so find a pos. def. approximation using 
-#             ##  PositiveFactorizations.jl
-#             F = cholesky(Positive, hess )
-#             # H p = -g
-#             ## Julia should use the appropriate algorithm
-#             ##  given F as a lower triangular Cholesky decomposition
-#             pvec =  -(F \ grad)
-
-#             # pdhess = isposdef(F.L*F.U)
-#             # print(" $(pdhess) ")
-
-#         # else
-            
-#         #     # H p = -g
-#         #     pvec = -(hess \ grad)
-            
-#         # end
-
-
-#         ##---------------------------------
-#         ## 2. update the current solution
-#         mcur = mcur .+ newtonstep .* pvec
-        
-#         mall[:,it] .= mcur
-
-
-#         if doplot
-#             figure()
-#             subplot(221)
-#             title("Gradient")
-#             plot(grad,".-")
-#             subplot(222)
-#             title("Hessian")
-#             imshow(hess)
-#             colorbar()
-#             subplot(223)
-#             title("model parameters")
-#             plot(mcur,".-",label="mcur")
-#             legend()
-#             subplot(224)
-#             title("inv(Hessian)")
-#             imshow(inv(hess))
-#             colorbar()
-#         end
-        
-
-#         ## misfit
-#         misfall[it+1] = misfitbeta2D(betpar,dobs,invCd,reshape(mcur,size(mstart)))
-#         print("misfit: $(misfall[it+1]) ")
-
-#     end
-#     println()
-
-#     return mall,misfall
-# end
-
-##################################################################
