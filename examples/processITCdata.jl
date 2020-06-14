@@ -15,12 +15,12 @@ function launchall()
 
     # plot 3D surface from results
     if  isdefined(@__MODULE__,:Makie)
-        plotsurface3D(dobs,betamix)
+        plotsurface3D(dobs,betamix,yscal=70)
     end
 
     ## plot fit to single experiments
     outdir="figs"
-    plotsingleexperiments(dobs,betamix,outdir)
+    plotsingleexperiments(outdir,dobs,betamix)
 
     ## construct binding isotherm for Beta mix using stationary and inflection points
     freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
@@ -45,6 +45,118 @@ function launchall()
 end
 
 ###########################################################
+
+function invertITCdata(inpdir::String,protein::String)
+
+    ##===========================================
+    ## read data
+    ## data = readallexperiments("inputdata/",["IM7","FN3","sFN3"])
+    data = readallexperiments(inpdir,[protein],discninitrows=0)
+     
+
+    #protein = "FN3" # "IM7" "FN3" "sFN3"
+    sdscon = data[protein]["sdscon"]
+    procon = data[protein]["procon"]
+    enthalpy = data[protein]["enout"] 
+    idxdata = data[protein]["idxdata"]
+
+
+    ## x axis is SDS concentration, y axis is protein concentration
+    ## xy = [sdscon procon]
+    dobs = ITCObsData(protein=protein,enthalpy=enthalpy,idxdata=idxdata,
+                      sdsprotcon=[sdscon procon])
+    # plot only the observed data
+    plotobsdata(dobs)
+
+    ##=========================
+    ## forward test
+    a = 0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
+    b = 1.05*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
+
+    minprotcon = minimum(dobs.sdsprotcon[:,2]) 
+    maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
+
+    @show a,b,minprotcon,maxprotcon
+
+    ## define the parameters of Beta 2D functions
+    modefuny = "linear"
+    konfuny  = "linear"
+    ampfuny  = "linear"
+    betpar = ScaledBeta2DParams(modefuny=modefuny,konfuny=konfuny,
+                                ampfuny=ampfuny,a=a,b=b,
+                                ymin=minprotcon,ymax=maxprotcon)
+
+    ##=======================================
+    ## Only testing initial guess?
+    ## Used to visualise the calculated data from the initial guess
+    ##   compared with the actual observed data, in order to manually
+    ##   find a good initial model
+    onlytestinitialguess = false
+
+    ##===========================================
+    ## Starting model
+
+    if protein=="IM7"
+        ## starting model IM7
+        ## Each row is one component (one 2D Beta function)
+        ##  Just add (remove) rows to increase (decrease) the number of components
+        ## Elements are: 2 for mode, 2 for the confidence parameter and
+        ##   2 for the amplitude parameter
+        comp1 = [0.6,  1.5,  30.0, 30.0, -2.5,  -5.0 ]  
+        comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
+        comp3 = [4.0,  9.0,  40.0, 80.0, 0.12552, 0.16736 ] 
+        comp4 = [5.0,  12.0, 20.0, 50.0, -1.6736, -2.092 ] 
+        # comp5 = [3.0,  7.0,  20.0, 50.0, 0.12552, 0.16736 ] # 30.0,   40.0]
+        # comp6 = [1.0,  3.0,  20.0, 50.0, -0.12552, -0.16736 ] # 30.0,   40.0]
+    end
+
+    ## mstart is a 2D array where each column represents one component
+    mstart = [comp1 comp2 comp3 comp4] #comp5 comp6]
+    @show size(mstart)
+
+    ############################################
+    if onlytestinitialguess==true
+        # Visualize initial guess
+        plotinitialguess(betpar,dobs,mstart)
+
+        ## stop here when testing initial models
+        return nothing,nothing
+    end
+
+    ###############################################
+    ## Set constraints
+    ## Elements are: 2 for mode, 2 for the confidence parameter and
+    ##   2 for the amplitude parameter
+    ## lower constraints 
+    lowc = [betpar.a,  betpar.a, 2.0, 2.0, -20.0, -20.0]
+    ## upper constraints
+    upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
+
+    lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
+
+    ###############################################
+    ## run the Newton optimization
+    nobs = length(dobs.enthalpy)
+    stdobs = 0.2 .* ones(nobs)   #2.0 .* ones(nobs)
+    stdobs[1:2] .= 0.5
+    stdobs[end-5:end] .= 5.5
+    @show stdobs[1]
+    Cd = diagm(stdobs.^2)
+    invCd = inv(Cd)
+
+    ## IPNewton from Optim.jl, box constraints
+    outdir = "output"
+    betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
+ 
+    ##================================
+    ## plot results
+    outdir = "figs"
+    plotresults(betamix,dobs,mstart,outdir)
+
+    return betamix,dobs
+end
+
+#######################################################################
 
 function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
       
@@ -92,9 +204,9 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     inflectionpts = [] ##Vector{Array{<:Real,2}}(undef,0)
     
     push!(inflectionpts, [ inflpts[1][2] protcon[1];
-                          inflpts[2][2] protcon[2];
-                          inflpts[3][2] protcon[3];
-                          inflpts[4][2] protcon[4] ] )
+                           inflpts[2][2] protcon[2];
+                           inflpts[3][2] protcon[3];
+                           inflpts[4][2] protcon[4] ] )
     
     push!(inflectionpts, [ inflpts[1][3] protcon[1];
                            inflpts[2][3] protcon[2];
@@ -113,12 +225,12 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
 
     push!(inflectionpts, [ inflpts[1][6] protcon[1];
                            inflpts[2][6] protcon[2];
-                           inflpts[3][6] protcon[3];
+                           inflpts[3][8] protcon[3];
                            inflpts[4][8] protcon[4] ] )
 
     push!(inflectionpts, [ inflpts[1][7] protcon[1];
                            inflpts[2][7] protcon[2];
-                           inflpts[3][7] protcon[3];
+                           inflpts[3][9] protcon[3];
                            inflpts[4][9] protcon[4] ] )
 
 
@@ -140,167 +252,43 @@ end
 
 ##########################################################
 
-function invertITCdata(inpdir::String,protein::String)
+# ######################################################################
 
-    ##===========================================
-    ## read data
-    ## data = readallexperiments("inputdata/",["IM7","FN3","sFN3"])
-    data = readallexperiments(inpdir,[protein])
+# function bindingisotherm_singlebetas(dobs::ITCObsData,betamix::BetaMix2D)
 
-    #protein = "FN3" # "IM7" "FN3" "sFN3"
-    sdscon = data[protein]["sdscon"]
-    procon = data[protein]["procon"]
-    enthalpy = data[protein]["enout"] 
-    idxdata = data[protein]["idxdata"]
+#     betpar = betamix.betpar
+#     mcur = betamix.modkonamp
+#     xy = dobs.sdsprotcon
+#     protein = betamix.protein
 
-    ## x axis is SDS concentration, y axis is protein concentration
-    ## xy = [sdscon procon]
-    
-    dobs = ITCObsData(protein=protein,enthalpy=enthalpy,idxdata=idxdata,
-                      sdsprotcon=[sdscon procon])
+#     ncomp = size(mcur,2)
+#     sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
 
-    ##=========================
-    ## forward test
-    a = minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
-    b = maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
+#     ## number of sampling points along x, i.e., [SDS]
+#     nxpts = 5
 
-    minprotcon = minimum(dobs.sdsprotcon[:,2]) 
-    maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
+#     ## loop on all Beta functions (components)
+#     for ico=1:ncomp
 
+#         ## define custom amplitude ratios values for each component
+#         if ico in [1,3,4]
+#             # ampratios = collect(LinRange(0.3,1.0,6))
+#             ampratios = (collect(LinRange(0.4,1.0,nxpts))).^(1/2)
+#         elseif ico==2
+#             ampratios = (collect(LinRange(0.8,1.0,nxpts))).^(1/2)
+#         end
 
-    ## define the parameters of Beta 2D functions
-    modefuny = "linear"
-    konfuny  = "linear"
-    ampfuny  = "linear"
-    betpar = ScaledBeta2DParams(modefuny=modefuny,konfuny=konfuny,
-                                ampfuny=ampfuny,a=a,b=b,
-                                ymin=minprotcon,ymax=maxprotcon)
+#         ## calculate intercept and angular coefficient, i.e., [SDS]_free and N_bound
+#         sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mcur[:,ico],ampratios=ampratios)
 
-    ##=======================================
-    ## Only testing initial guess?
-    ## Used to visualise the calculated data from the initial guess
-    ##   compared with the actual observed data, in order to manually
-    ##   find a good initial model
-    onlytestinitialguess = false
+#     end
 
-    ##===========================================
-    ## Starting model
+#     ## plot results
+#     outdir="figs"
+#     plotbindisotherm_singlebetas(protein,betpar,dobs.sdsprotcon,mcur,sdsfNbou,outdir,Npts=100)
 
-    if protein=="IM7"
-        ## starting model IM7
-        ## Each row is one component (one 2D Beta function)
-        ##  Just add (remove) rows to increase (decrease) the number of components
-        ## Elements are: 2 for mode, 2 for the confidence parameter and
-        ##   2 for the amplitude parameter
-        comp1 = [0.37, 2.5,  50.0, 30.0, -2.092,  -5.23 ] #  -500.0, -1250.0]
-        comp2 = [1.4,  4.8,  60.0, 40.0, -2.092,  -3.3472 ] #  -500.0,  -800.0]
-        comp3 = [4.5,  10.0, 100.0, 80.0, 0.12552, 0.16736 ] # 30.0,    40.0]
-        comp4 = [6.0,  15.0, 130.0, 50.0, -1.6736, -2.092 ]    # -400.0,  -500.0]
+#     return sdsfNbou
+# end
 
-    # elseif protein=="FN3"
-    #     ## starting model FN3
-    #     ## Each row is one component (one 2D Beta function)
-    #     ##  Just add (remove) rows to increase (decrease) the number of components
-    #     ## Elements are: 2 for mode, 2 for the confidence parameter and
-    #     ##   2 for the amplitude parameter
-    #     comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
-    #     comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
-    #     comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
-    #     comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
-
-    # elseif protein=="sFN3"
-    #     ## starting model sFN3
-    #     ## Each row is one component (one 2D Beta function)
-    #     ##  Just add (remove) rows to increase (decrease) the number of components
-    #     ## Elements are: 2 for mode, 2 for the confidence parameter and
-    #     ##   2 for the amplitude parameter
-    #     comp1 = [0.4,  1.4,  50.0, 30.0, -500.0, -1250.0]
-    #     comp2 = [1.8,  4.0,  60.0, 40.0, -500.0,  -800.0]
-    #     comp3 = [3.2,  6.4, 100.0, 80.0,   30.0,    40.0]
-    #     comp4 = [4.5,  8.0,  80.0, 50.0, -400.0,  -500.0]
-
-    end
-
-    ## mstart is a 2D array where each column represents one component
-    mstart = [comp1 comp2 comp3 comp4]
-    @show size(mstart)
-
-    ############################################
-    if onlytestinitialguess==true
-        # Visualize initial guess
-        plotinitialguess(betpar,dobs,mstart)
-
-        ## stop here when testing initial models
-        return nothing
-    end
-
-    ###############################################
-    ## Set constraints
-    ## Elements are: 2 for mode, 2 for the confidence parameter and
-    ##   2 for the amplitude parameter
-    ## lower constraints 
-    lowc = [betpar.a,  betpar.a, 2.0, 2.0, -10.0, -10.0]
-    ## upper constraints
-    upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
-
-    lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
-
-    ###############################################
-    ## run the Newton optimization
-    nobs = length(dobs.enthalpy)
-    stdobs = 0.01 .* ones(nobs)   #2.0 .* ones(nobs)
-    @show stdobs[1]
-    invCd = inv(diagm(stdobs.^2))
-
-    ## IPNewton from Optim.jl, box constraints
-    outdir = "output"
-    betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
- 
-    ##================================
-    ## plot results
-    outdir = "figs"
-    plotresults(betamix,dobs,mstart,outdir)
-
-    return betamix,dobs
-end
-
-######################################################################
-
-function bindingisotherm_singlebetas(dobs::ITCObsData,betamix::BetaMix2D)
-
-    betpar = betamix.betpar
-    mcur = betamix.modkonamp
-    xy = dobs.sdsprotcon
-    protein = betamix.protein
-
-    ncomp = size(mcur,2)
-    sdsfNbou = Array{Matrix{<:Real}}(undef,ncomp)
-
-    ## number of sampling points along x, i.e., [SDS]
-    nxpts = 5
-
-    ## loop on all Beta functions (components)
-    for ico=1:ncomp
-
-        ## define custom amplitude ratios values for each component
-        if ico in [1,3,4]
-            # ampratios = collect(LinRange(0.3,1.0,6))
-            ampratios = (collect(LinRange(0.4,1.0,nxpts))).^(1/2)
-        elseif ico==2
-            ampratios = (collect(LinRange(0.8,1.0,nxpts))).^(1/2)
-        end
-
-        ## calculate intercept and angular coefficient, i.e., [SDS]_free and N_bound
-        sdsfNbou[ico] = freeboundsds_singlebeta(betpar,mcur[:,ico],ampratios=ampratios)
-
-    end
-
-    ## plot results
-    outdir="figs"
-    plotbindisotherm_singlebetas(protein,betpar,dobs.sdsprotcon,mcur,sdsfNbou,outdir,Npts=100)
-
-    return sdsfNbou
-end
-
-######################################################################
+# ######################################################################
 

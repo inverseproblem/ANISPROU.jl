@@ -4,6 +4,31 @@
 """
 $(TYPEDSIGNATURES)
 
+Plot the observed data as a scatter plot.
+"""
+function plotobsdata(dobs)
+    
+    sdscon = dobs.sdsprotcon[:,1]
+    procon = dobs.sdsprotcon[:,2]
+    protein = dobs.protein
+
+    figure(figsize=(11,6))
+    title("$protein observed data")
+    #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
+    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
+    colorbar(label="Enthalpy [kJ/mol]")
+    xlabel("SDS concentration [mM]")
+    ylabel("Protein concentration [mM]")    
+   
+    tight_layout()
+    return
+end
+
+####################################################################
+
+"""
+$(TYPEDSIGNATURES)
+
 Plot the fit to the enthalpy data as a result of the initial guess, i.e., the starting model parameters of the Beta functions.
 """
 function plotinitialguess(betpar,dobs,mstart)
@@ -162,6 +187,7 @@ function plotmodelines(betpar,mcur,modname)
         else
             plot(xm,ym,"-k",linewidth=0.7)
         end
+        plot(xm[[1,end]],ym[[1,end]],"ok",markersize=5.0)
     end
     legend()
     # xlim([-2,betpar.b])
@@ -311,6 +337,11 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
     ylabel("Nbound")
 
     tight_layout()
+    try
+        mkdir(outdir)
+    catch
+        nothing
+    end
     savefig(joinpath(outdir,protein*"_bind-isoth_betamix.pdf"))
     return
 end
@@ -359,6 +390,11 @@ function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
     ylabel("Enthalpy [kJ/mol]")
     tight_layout()
     
+    try
+        mkdir(outdir)
+    catch
+        nothing
+    end
     savefig(joinpath(outdir,protein*"_foundfeatures_betamix.pdf"))
     return
 end
@@ -368,37 +404,49 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Plot each single experiments, i.e., enthalpy for an initial protein concentration and increasing SDS concentration, comparing measured and calculate data (from results of inversion).
+Plot each single experiment, i.e., enthalpy for an initial protein concentration and increasing SDS concentration.
+If the third argument `betamix` is passed, shows a comparison of measured and calculate data (from results of inversion) including each single Beta component.
 """
-function plotsingleexperiments(dobs,betamix,outdir) #; expernumber=nothing)
+function plotsingleexperiments(outdir,dobs,betamix=nothing) #; expernumber=nothing)
 
     nexper = length(dobs.idxdata)
     obsdata = dobs.enthalpy
-    protein = betamix.protein
-    ncomp = size(betamix.modkonamp,2)
+    protein = dobs.protein
 
     for i in 1:nexper
 
         idx = dobs.idxdata[i]
         xy = dobs.sdsprotcon[idx,:]
-       
-        dcalcall = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
         obsexper = dobs.enthalpy[idx]
 
         figure(figsize=(12,6.4))
         title("Protein: $protein, initial concentration: $(xy[1,2])")
-        plot(xy[:,1],obsexper,".-r",linewidth=2,label="measured data")
-        plot(xy[:,1],dcalcall,".-k",linewidth=2,label="calculated data")
-        for c=1:ncomp
-            dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
-            plot(xy[:,1],dcalc1,".--",linewidth=0.5,markersize=0.5,label="Beta comp. $c")
+        plot(xy[:,1],obsexper,".-k",linewidth=2,label="measured data")
+
+        if betamix!=nothing
+            dcalcall = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+            plot(xy[:,1],dcalcall,".-r",linewidth=2,label="calculated data")
+            ncomp = size(betamix.modkonamp,2)
+            for c=1:ncomp
+                dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
+                plot(xy[:,1],dcalc1,".--",linewidth=0.5,markersize=0.65,label="Beta comp. $c")
+            end
         end
         legend()
         xlabel("SDS concentration [mM]")
         ylabel("Enthalpy [kJ/mol")
         tight_layout()
 
-        savefig(joinpath(outdir,protein*"_experiment$(i).pdf"))
+        try
+            mkdir(outdir)
+        catch
+            nothing
+        end
+        if betamix!=nothing
+            savefig(joinpath(outdir,protein*"_experiment$(i)_fit.pdf"))
+        else
+            savefig(joinpath(outdir,protein*"_experiment$(i).pdf"))
+        end
     end
 
     return

@@ -16,11 +16,18 @@ The entalphy values are *scaled* by a factor given by the argument `scalfactor`,
 -`proteinnames`: array of strings containing the names of proteins
 -`scalfactor`=0.004184: scaling factor for enthalpy, defaults 
                         to 0.004184 (Cal/mol to kJ/mol)
+-`discninitrows`=0: number of initial rows of the data set to discard. This is used
+                    to remove some initial data often affected by strong 
+                    instrument noise which could bias the fitting process.
 
 """
 function readallexperiments(inpdir::String,proteinnames::Vector{String} ;
-                            scalfactor::Float64=0.004184)
+                            scalfactor::Float64=0.004184 ,
+                            discninitrows::Integer=0)
     ## swith units, from Cal/mol to kJ/mol by multiplying by 0.004184
+    @assert discninitrows>=0
+    starow = discninitrows+1
+    #@show discninitrows
 
     println("Reading data from directory: $inpdir")
     println(" Scaling enthalpy values by a factor $scalfactor")
@@ -43,17 +50,31 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String} ;
 
         # get a list of files in inpdir
         fllist = readdir(joinpath(inpdir,proteinnames[p]))
+        # @show fllist
+        # @show occursin(proteinnames[p],fllist[1])
+        # @show endswith(fllist[1],".DAT")
         # select only files starting with
-        checkfile(x) = (startswith(x,proteinnames[p]) && endswith(x,"uM.txt"))
+        checkfile(x) = (occursin(proteinnames[p],x) && endswith(x,".DAT"))
         fllist = filter(checkfile,fllist)
+        println(" file list: \n$(fllist)")
 
         startind = 1
         for fl in fllist
-            csds1,cpro1,ceout1 = readsingleexperiment(joinpath(inpdir,proteinnames[p]*"/"*fl))
+
+            seflname = joinpath(inpdir,proteinnames[p]*"/"*fl)
+            csds1,cpro1,ceout1 = readsingleexperiment(seflname)
+
+            # discard some initial rows (strongly affected by instrument error)
+            csds1 = csds1[starow:end] 
+            cpro1 = cpro1[starow:end]
+            ceout1 = ceout1[starow:end]
+
+            # add to dictionary
             lendata = length(ceout1)
             push!(sdscon,csds1...)
             push!(procon,cpro1...)
             push!(enout,ceout1...)
+            # indices of individual experiments
             push!(idxdata,startind:(startind+lendata-1))
             startind += lendata
         end
@@ -86,20 +107,36 @@ function readsingleexperiment(singlefl::String)
     #
     # NDH is the energy output of that single injection in J/mol..
     # 
-    
+
+    # REMARK:
+    # For DH, INJV, XMt and NDH an initial row with a zero should be added.
+    # Xt and Mt are initially one row longer than the other columns, and
+    #   this is corrected for by the additional zeros.
+
     data,header = readdlm(singlefl,header=true)
     header = vec(header)
 
+    idxXt = findall(x->x=="Xt",header)[1]
+    idxMt = findall(x->x=="Mt",header)[1]
+    @assert idxXt<idxMt
+
+    ## DH	INJV	Xt	Mt	XMt	NDH
+    # the last row contains only Xt and Mt at the beginning...
+    data2 = data[1:end-1,:]
+    lasttXtMt = data[end,:]
+   
     idx=findall(x->x=="Xt",header)[1]
-    sdscon = data[:,idx]
+    # Xt in the last row of data is in the second column
+    sdscon = convert.(Float64,[data2[:,idx]; lasttXtMt[2]])
 
     idx=findall(x->x=="Mt",header)[1]
-    procont = data[:,idx]
+    # Xt in the last row of data is in the third column
+    procon = convert.(Float64,[data2[:,idx]; lasttXtMt[3]])
 
     idx=findall(x->x=="NDH",header)[1]
-    enout = data[:,idx]
+    enout = convert.(Float64,[0.0; data2[:,idx]])
 
-    return sdscon,procont,enout
+    return sdscon,procon,enout
 end
 
 ###########################################################

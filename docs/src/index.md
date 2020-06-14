@@ -29,13 +29,33 @@ In the following a step-by-step tutorial illustrating how to process the ITC dat
 
 ## Read the data
 
-First import the package and read the data. Then extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
+First of all, import the package and read the data. The function [`readallexperiments`](@ref) takes care of reading the measred data from a ASCII/text file produced by some common instruments. 
+
+However, the user can read/obtain the data in any other way, as long as it is possible to create a structure [`ITCObsData`](@ref), which it is what is used in all the calculations (e.g., data fitting).
+
+If using the [`readallexperiments`](@ref) function, the directory containing the data set and the file names must have a certain structure in order for the function reading the data to work. Such structure should be like the following example, where the directory name is the protein name `IM7`:
+```
+100uMIM7highSDS_2.DAT
+125uMIM7highSDS_1.DAT
+25uMIM7highSDS_5.DAT
+50uMIM7highSDS_4.DAT
+75uMIM7highSDS_3.DAT
+```
+The file names must follow the following rules:
+- they must end with ".DAT"
+- they must contain the name of protein (e.g., "IM7") in the file name
+- the file format must be the same than the provided example (a commonly used instrument).
+
+Two optional parameters can be passed to [`readallexperiments`](@ref), namely `scalfactor` (defaulting to 0.004184 to convert Cal/mol to kJ/mol) which scales the enthalpy values, and `discninitrows` (defaulting to 2) which skips a certain  number of initial rows from the data set because usually initial data are affected by strong instrument noise which could bias the subsequent fitting process.  See [`readallexperiments`](@ref) to adapt it to a different case.
+
+Then extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
 ```@example procITC
+using PyPlot # hide
 using ANISPROU
 
 inpdir="../../examples/inputdata/" # directory containing input data
 protein = "IM7" # protein name
-data = readallexperiments(inpdir,[protein])
+data = readallexperiments(inpdir,[protein],)
 
 sdscon = data[protein]["sdscon"]
 procon = data[protein]["procon"]
@@ -45,13 +65,29 @@ idxdata = data[protein]["idxdata"]
 dobs = ITCObsData(protein=protein,enthalpy=enthalpy,idxdata=idxdata,sdsprotcon=[sdscon procon])
 ```
 The `x` axis represents the SDS concentration, while the `y` axis the protein concentration.
+To plot the observed data one can use the function [`plotobsdata`](@ref):
+```@example procITC
+plotobsdata(dobs)
+savefig("plotobsdata.svg") # hide
+nothing # hide
+```
+![](plotinitguess.svg)
+Another way of visualising the observed data is plotting each single experiment in 1D using [`plotsingleexperiments`](@ref):
+```@example procITC
+outdir="figs"
+plotsingleexperiments(outdir,dobs)
+savefig("plotsingexpobs.svg") # hide
+nothing # hide
+```
+![](plotsingexpobs.svg)
+
 
 ## [Setup the inverse problem: fitting the enthalpy data](@id setupip)
 
-Now define the parameters of the 2D Beta functions: the type of function for the mode, concentration parameter and amplitude (e.g., linear), the `x` and `y` limits in terms of minimum and maximum of SDS and protein concentrations. See [`ScaledBeta2DParams`](@ref).
+Now define the parameters of the 2D Beta functions: the type of function for the mode, concentration parameter and amplitude (e.g., linear), the `x` and `y` limits in terms of minimum and maximum of SDS and protein concentrations. See [`ScaledBeta2DParams`](@ref). Often enlarging by a little bit the domain on the `x` axis helps the Beta functions to better fit the data.
 ```@example procITC
-a = minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
-b = 1.2*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
+a = 0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
+b = 1.05*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
 minprotcon = minimum(dobs.sdsprotcon[:,2]) 
 maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
@@ -81,10 +117,10 @@ In the following we create a starting model use 4 Beta components. To add more (
 ```@example procITC
 # Elements are: 2 for mode, 2 for the confidence parameter and
 #   2 for the amplitude parameter
-comp1 = [0.37, 2.5,   50.0, 30.0, -2.092,  -5.23]
-comp2 = [1.4,  4.8,   60.0, 40.0, -2.092,  -3.3472]
-comp3 = [4.5,  10.0, 100.0, 80.0,  0.12552, 0.16736]
-comp4 = [6.0,  15.0,  80.0, 130.0, -1.6736, -2.092]
+comp1 = [0.6,  1.5,  30.0, 30.0, -2.5,  -5.0 ]
+comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ]
+comp3 = [4.0,  9.0,  40.0, 80.0, 0.12552, 0.16736 ]
+comp4 = [6.0,  14.0, 20.0, 50.0, -1.6736, -2.092 ]
 
 # mstart is a 2D array where each column represents one component
 mstart = [comp1 comp2 comp3 comp4]
@@ -94,7 +130,6 @@ nothing # hide
 To visually check the goodness of our first guess we can plot it using
 ```@example procITC
 plotinitialguess(betpar,dobs,mstart)
-using PyPlot # hide
 savefig("plotinitguess.svg") # hide
 nothing # hide
 ```
@@ -107,7 +142,7 @@ The solution of the inverse problem, that is, finding the set of model parameter
 
 First, we need to set the constraints for the Newton optimization. That is done by specifying the lower and upper bounds for each parameter and and passing it to the function [`setconstraints`](@ref), as shown in the following:
 ```@example procITC
-lowc = [betpar.a, betpar.a, 2.0, 2.0, -10.0, -10.0] # lower constraints 
+lowc = [betpar.a, betpar.a, 2.0, 2.0, -20.0, -20.0] # lower constraints 
 upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0] # upper constraints
 lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 nothing # hide
@@ -116,7 +151,7 @@ In order to solve the inverse problem we need a covariance matrix (symmetric pos
 ```@example procITC
 using LinearAlgebra
 nobs = length(dobs.enthalpy)
-stdobs = 0.01 .* ones(nobs) # standard deviation of the error on measured data
+stdobs = 0.3 .* ones(nobs) # standard deviation of the error on measured data
 invCd = inv(diagm(stdobs.^2)) # in this case a diagonal precision matrix
 nothing # hide
 ```
@@ -142,7 +177,7 @@ The function [`plotsingleexperiments`](@ref) provides a way to show the fit of t
 ```@example procITC
 # plot fit to single experiments
 outdir="figs"
-plotsingleexperiments(dobs,betamix,outdir)
+plotsingleexperiments(outdir,dobs,betamix)
 savefig(outdir*"/IM7_experiment1.svg") # hide
 nothing # hide
 ```
@@ -153,7 +188,8 @@ nothing # hide
 In case the package `Makie` is installed, it is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
 ```@example procITC
 using Makie
-scene=plotsurface3D(dobs,betamix)
+plotsurface3D(dobs,betamix)
+scene=plotsurface3D(dobs,betamix,displayscene=false) # hide
 Makie.save("figs/surfaceplot.png", scene) # hide
 nothing # hide
 ```
@@ -187,59 +223,59 @@ nothing # hide
 
 The next step involves selecting a subset of the found point to construct the binding isotherm: this can be done by looking at the previous plot and picking only desired points.
 ```@example procITC
-
 # ===========================================
 # Selection of local minima and maxima
-locminmax = []
+locminmax = [] ##Vector{Array{<:Real,2}}(undef,0)
 
 push!(locminmax, [ statpts[1][2] protcon[1];
-statpts[2][2] protcon[2];
-statpts[3][2] protcon[3];
-statpts[4][2] protcon[4] ] )
+                   statpts[2][2] protcon[2];
+                   statpts[3][2] protcon[3];
+                   statpts[4][2] protcon[4] ] )
 
 push!(locminmax, [ statpts[2][3] protcon[2];
-statpts[3][3] protcon[3];
-statpts[4][3] protcon[4] ] )
+                   statpts[3][3] protcon[3];
+                   statpts[4][3] protcon[4] ] )
 
 push!(locminmax, [ statpts[1][4] protcon[1];
-statpts[2][6] protcon[2];
-statpts[3][6] protcon[3];
-statpts[4][6] protcon[4] ] )
+	               statpts[2][6] protcon[2];
+                   statpts[3][6] protcon[3];
+                   statpts[4][6] protcon[4] ] )
 
 
 # ===========================================
 # Selection of inflection points
-inflectionpts = []
-
+inflectionpts = [] ##Vector{Array{<:Real,2}}(undef,0)
+    
 push!(inflectionpts, [ inflpts[1][2] protcon[1];
-inflpts[2][2] protcon[2];
-inflpts[3][2] protcon[3];
-inflpts[4][2] protcon[4] ] )
+                       inflpts[2][2] protcon[2];
+                       inflpts[3][2] protcon[3];
+                       inflpts[4][2] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][3] protcon[1];
-inflpts[2][3] protcon[2];
-inflpts[3][3] protcon[3];
-inflpts[4][3] protcon[4] ] )
+                       inflpts[2][3] protcon[2];
+                       inflpts[3][3] protcon[3];
+                       inflpts[4][3] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][4] protcon[1];
-inflpts[2][4] protcon[2];
-inflpts[3][4] protcon[3];
-inflpts[4][4] protcon[4] ] )
+	                   inflpts[2][4] protcon[2];
+                       inflpts[3][4] protcon[3];
+                       inflpts[4][4] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][5] protcon[1];
-inflpts[2][5] protcon[2];
-inflpts[3][5] protcon[3];
-inflpts[4][5] protcon[4] ] )
+	                   inflpts[2][5] protcon[2];
+                       inflpts[3][5] protcon[3];
+                       inflpts[4][5] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][6] protcon[1];
-inflpts[2][6] protcon[2];
-inflpts[3][6] protcon[3];
-inflpts[4][8] protcon[4] ] )
+                       inflpts[2][6] protcon[2];
+                       inflpts[3][8] protcon[3];
+                       inflpts[4][8] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][7] protcon[1];
-inflpts[2][7] protcon[2];
-inflpts[3][7] protcon[3];
-inflpts[4][9] protcon[4] ] )
+                       inflpts[2][7] protcon[2];
+                       inflpts[3][7] protcon[3];
+                       inflpts[4][9] protcon[4] ] )
+
 nothing # hide
 ```
 
@@ -266,7 +302,7 @@ Compute the area for each Beta component at requested protein concentration
 ```@example procITC
 protcon = 0.08 # requested protein concentration
 area,errarea = area_enthalpy(betamix,protcon) # compute area
-println("Area at protein concentration $protcon for each component: \n$area, \nerror\n $errarea\n")
+println("Area at protein concentration $protcon for each component: \n$area, \nintegration error\n $errarea\n")
 nothing # hide
 ```
 
@@ -275,7 +311,7 @@ Compute volume for all Beta components within requested bounds of protein concen
 minprotcon = betamix.betpar.ymin  # lower bound for integral
 maxprotcon = betamix.betpar.ymax  # upper bound for integral
 volume,errvol = volume_enthalpy(betamix,minprotcon,maxprotcon) # compute volume
-println("Volume within bounds for each component: \n$volume, \nerror\n $errvol\n")
+println("Volume within bounds for each component: \n$volume, \nintegration error\n $errvol\n")
 nothing # hide
 ```
 
@@ -298,6 +334,7 @@ volume_enthalpy
 ```
 ## Plotting
 ```@docs
+plotobsdata
 plotinitialguess
 plotresults
 plotsingleexperiments
@@ -305,5 +342,17 @@ plotfoundfeatures
 plotbindisotherm
 saveresultVTK
 plotsurface3D
+```
+
+# Other non exported functions
+```@docs
+ANISPROU.lssqregr
+ANISPROU.plotmodelines
+ANISPROU.getmodparbeta
+ANISPROU.forwmod2D
+ANISPROU.readsingleexperiment
+ANISPROU.scaledbeta
+ANISPROU.misfitbeta2D
+ANISPROU.singlescaledbeta2D 
 ```
 
