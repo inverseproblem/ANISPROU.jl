@@ -18,7 +18,7 @@ arguments.
 """
 function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0)
 
-    @assert betamix.betpar.ymin<=protcon<=betamix.betpar.ymax
+    # @assert betamix.betpar.ymin<=protcon<=betamix.betpar.ymax
         
     # scale the SDS concentration from mM to mole 10^(-3)*203*10^(-6) =2.03*10^(-7).
     # the 203 µl is specific for certain instruments
@@ -63,6 +63,39 @@ function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0
     end
 
     return integr,err
+end
+
+###########################################################
+
+"""
+$(TYPEDSIGNATURES)
+
+Calculate the area of each individual Beta function for a set of  protein concentrations.
+
+# Arguments
+
+-`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+            the modes, confidence parameters and amplitudes and protein name
+-`protcosn`: array of protein concentrations at which to calculate the areas
+-`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+               is 203.0μl.
+"""
+function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal::Real=203.0,
+                        doplot::Bool=true)
+
+    N=length(protcons)
+    ncomp = size(betamix.modkonamp,2)
+    areas = zeros(N,ncomp)
+    errar = zeros(N,ncomp)
+    for i=1:N
+        areas[i,:],errar[i,:] = area_enthalpy(betamix,protcons[i],volumescal=volumescal)
+    end
+    
+    if doplot
+        plotareavsprotcon(protcons,areas)
+    end
+
+    return areas,errar
 end
 
 ###########################################################

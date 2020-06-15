@@ -281,10 +281,15 @@ end
 """
 @inline function scaledbeta(mo::Real,kon::Real,a::Real,b::Real,
                             amplscale::Real,x::Real)
+
+    if a > mo || mo > b
+        @show mo,kon,amplscale,a,b
+    end
     
     @assert b>a
     @assert a <= mo <= b
-    @assert kon>=2.0
+    ## keep kon at >2.0 instead of >=2.0 to avoid weird shapes...
+    @assert kon>2.0 
 
     rmo = (mo-a)/(b-a)
     α = rmo * (kon-2.0) + 1.0

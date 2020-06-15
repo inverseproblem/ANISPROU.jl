@@ -5,7 +5,10 @@ Author = "Andrea Zunino"
 
 # ANISPROU
 
-Analysis of isothermal titration calorimetry (ITC) data on sodium dodecyl sulphate (SDS) mediated protein unfolding.
+ANalysis of ISothermal titration calorimetry data on sodium dodecyl sulphate (SDS) mediated PRotein Unfolding.
+
+Analysis of isothermal titration calorimetry (ITC) data on SDS mediated protein unfolding (ANISPROU) is a tool developed to globally fit an entire dataset and to extract thermodynamic values from this fit. ITC data on SDS mediated protein unfolding, at different protein concentrations, is used as an input for the fitting. The linearity of the features in the ITC data as a function of protein concentration allows the data to be fitted using a number of 3D beta functions, each representing a thermodynamic event. Besides the enthalpy of unfolding, the binding isotherm is also among the outputs. 
+
 
 Contents:
 ```@contents
@@ -55,7 +58,7 @@ using ANISPROU
 
 inpdir="../../examples/inputdata/" # directory containing input data
 protein = "IM7" # protein name
-data = readallexperiments(inpdir,[protein],)
+data = readallexperiments(inpdir,[protein])
 
 sdscon = data[protein]["sdscon"]
 procon = data[protein]["procon"]
@@ -119,8 +122,8 @@ In the following we create a starting model use 4 Beta components. To add more (
 #   2 for the amplitude parameter
 comp1 = [0.6,  1.5,  30.0, 30.0, -2.5,  -5.0 ]
 comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ]
-comp3 = [4.0,  9.0,  40.0, 80.0, 0.12552, 0.16736 ]
-comp4 = [6.0,  14.0, 20.0, 50.0, -1.6736, -2.092 ]
+comp3 = [4.0,  9.0,  40.0, 80.0, 0.12, 0.16 ]
+comp4 = [5.0,  12.0, 20.0, 50.0, -1.6, -2.0 ]
 
 # mstart is a 2D array where each column represents one component
 mstart = [comp1 comp2 comp3 comp4]
@@ -142,7 +145,7 @@ The solution of the inverse problem, that is, finding the set of model parameter
 
 First, we need to set the constraints for the Newton optimization. That is done by specifying the lower and upper bounds for each parameter and and passing it to the function [`setconstraints`](@ref), as shown in the following:
 ```@example procITC
-lowc = [betpar.a, betpar.a, 2.0, 2.0, -20.0, -20.0] # lower constraints 
+lowc = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0] # lower constraints [confidence must be >2.0]
 upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0] # upper constraints
 lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 nothing # hide
@@ -151,7 +154,7 @@ In order to solve the inverse problem we need a covariance matrix (symmetric pos
 ```@example procITC
 using LinearAlgebra
 nobs = length(dobs.enthalpy)
-stdobs = 0.3 .* ones(nobs) # standard deviation of the error on measured data
+stdobs = 0.2 .* ones(nobs) # standard deviation of the error on measured data
 invCd = inv(diagm(stdobs.^2)) # in this case a diagonal precision matrix
 nothing # hide
 ```
@@ -221,7 +224,7 @@ nothing # hide
 ```
 ![](plotfeat.svg)
 
-The next step involves selecting a subset of the found point to construct the binding isotherm: this can be done by looking at the previous plot and picking only desired points.
+The next step involves selecting a subset of the found points to construct the binding isotherm: this can be done by looking at the previous plot and picking only desired points. The numbers on the plot nearby the found points correspond to the index in the array of found points.
 ```@example procITC
 # ===========================================
 # Selection of local minima and maxima
@@ -237,7 +240,7 @@ push!(locminmax, [ statpts[2][3] protcon[2];
                    statpts[4][3] protcon[4] ] )
 
 push!(locminmax, [ statpts[1][4] protcon[1];
-	               statpts[2][6] protcon[2];
+                   statpts[2][6] protcon[2];
                    statpts[3][6] protcon[3];
                    statpts[4][6] protcon[4] ] )
 
@@ -257,18 +260,18 @@ push!(inflectionpts, [ inflpts[1][3] protcon[1];
                        inflpts[4][3] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][4] protcon[1];
-	                   inflpts[2][4] protcon[2];
+                       inflpts[2][4] protcon[2];
                        inflpts[3][4] protcon[3];
                        inflpts[4][4] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][5] protcon[1];
-	                   inflpts[2][5] protcon[2];
+                       inflpts[2][5] protcon[2];
                        inflpts[3][5] protcon[3];
                        inflpts[4][5] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][6] protcon[1];
                        inflpts[2][6] protcon[2];
-                       inflpts[3][8] protcon[3];
+                       inflpts[3][6] protcon[3];
                        inflpts[4][8] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][7] protcon[1];
@@ -298,15 +301,24 @@ nothing # hide
 
 ## Calculating areas and volumes
 
-Compute the area for each Beta component at requested protein concentration
+Compute the area for each Beta component at requested protein concentration:
 ```@example procITC
 protcon = 0.08 # requested protein concentration
 area,errarea = area_enthalpy(betamix,protcon) # compute area
 println("Area at protein concentration $protcon for each component: \n$area, \nintegration error\n $errarea\n")
 nothing # hide
 ```
-
-Compute volume for all Beta components within requested bounds of protein concentration
+It is also possible to calculate the area for each Beta component for a set of different protein concentrations:
+```@example procITC
+N = 15
+protcons = collect(LinRange(0.0,0.14,N)) # set of protein concentrations
+areas,erras = areasvsprotcon(betamix,protcons,doplot=true)
+savefig("plotsetareas.svg") # hide
+nothing # hide
+```	
+![](plotsetareas.svg)
+	
+Compute the volume for all Beta components within requested bounds of protein concentration:
 ```@example procITC
 minprotcon = betamix.betpar.ymin  # lower bound for integral
 maxprotcon = betamix.betpar.ymax  # upper bound for integral
@@ -330,6 +342,7 @@ solveinvprob
 findcurvefeatures
 calcfreeSDSNbound
 area_enthalpy
+areasvsprotcon
 volume_enthalpy
 ```
 ## Plotting
@@ -342,6 +355,8 @@ plotfoundfeatures
 plotbindisotherm
 saveresultVTK
 plotsurface3D
+plotareavsprotcon
+plotbetacomp1D
 ```
 
 # Other non exported functions

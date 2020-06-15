@@ -12,11 +12,11 @@ The entalphy values are *scaled* by a factor given by the argument `scalfactor`,
 
 # Arguments 
 
--`inpdir`: directory containing the input data
--`proteinnames`: array of strings containing the names of proteins
--`scalfactor`=0.004184: scaling factor for enthalpy, defaults 
+- `inpdir`: directory containing the input data
+- `proteinnames`: array of strings containing the names of proteins
+- `scalfactor`=0.004184: scaling factor for enthalpy, defaults 
                         to 0.004184 (Cal/mol to kJ/mol)
--`discninitrows`=0: number of initial rows of the data set to discard. This is used
+- `discninitrows`=0: number of initial rows of the data set to discard. This is used
                     to remove some initial data often affected by strong 
                     instrument noise which could bias the fitting process.
 

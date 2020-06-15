@@ -37,8 +37,10 @@ export plotsingleexperiments
 export saveresultVTK
 export findcurvefeatures
 export calcfreeSDSNbound
-export area_enthalpy,volume_enthalpy 
+export area_enthalpy,volume_enthalpy,areasvsprotcon
 export plotbindisotherm,plotfoundfeatures
+export plotareavsprotcon,plotbetacomp1D
+
 
 include("readITCdata.jl")
 include("invertITCdata2D.jl")

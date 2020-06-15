@@ -362,7 +362,7 @@ function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
 
     function fwd1ptxy(xpt::Real,ypt::Real)
         xy = hcat(xpt,ypt)
-        out = ANISPROU.forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+        out = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
         return out[1] 
     end
 
@@ -429,7 +429,7 @@ function plotsingleexperiments(outdir,dobs,betamix=nothing) #; expernumber=nothi
             ncomp = size(betamix.modkonamp,2)
             for c=1:ncomp
                 dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
-                plot(xy[:,1],dcalc1,".--",linewidth=0.5,markersize=0.65,label="Beta comp. $c")
+                plot(xy[:,1],dcalc1,".--",linewidth=0.7,markersize=0.75,label="Beta comp. $c")
             end
         end
         legend()
@@ -453,3 +453,67 @@ function plotsingleexperiments(outdir,dobs,betamix=nothing) #; expernumber=nothi
 end
 
 #####################################################
+"""
+$(TYPEDSIGNATURES)
+
+    """
+function plotareavsprotcon(protcons,areas)
+    ncomp = size(areas,2)
+    figure()
+    for i=1:ncomp
+        plot(protcons,areas[:,i],"o-",label="Beta comp. #$i")
+    end
+    legend()
+    xlabel("Protein concentration [mM]")
+    ylabel("Area [kJ]")
+    tight_layout()
+    return
+end
+
+#####################################################
+
+"""
+$(TYPEDSIGNATURES)
+
+Plot the components and the sum of Beta functions for a given protein concentration.
+"""
+function plotbetacomp1D(betamix,protcon) #; expernumber=nothing)
+
+    protein = betamix.protein
+
+    # function fwd1ptxy(xpt::Real,ypt::Real)
+    #     xy = hcat(xpt,ypt)
+    #     out = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+    #     return out[1] 
+    # end
+
+    figure(figsize=(12,6.4))
+    title("Protein: $protein, concentration: $protcon")
+
+    N = 100
+    x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
+    y = protcon.*ones(N)
+    xy = [x y]
+
+    ncomp = size(betamix.modkonamp,2)
+    for c=1:ncomp
+        #dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
+        xy = [x y]
+        enth = forwmod2D(betamix.betpar,xy,betamix.modkonamp[:,c:c])
+        bpars = round.(betamix.modkonamp[:,c:c],digits=2)
+        plot(x,enth,"--",linewidth=1,label="Beta comp. $c, $(bpars)")
+        #@show c,betamix.modkonamp[:,c:c]
+    end
+
+    enth = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
+    plot(x,enth,"-k",linewidth=2,label="sum of Beta func.")
+
+    legend()
+    xlabel("SDS concentration [mM]")
+    ylabel("Enthalpy [kJ/mol")
+    tight_layout()
+
+    return
+end
+
+#############################################################################3

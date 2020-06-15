@@ -89,7 +89,7 @@ function findcurvefeatures(betamix::BetaMix2D,protcon::Vector{<:Real})
         statpts[i] = find_zeros(deriv1f,lowlim,uplim)
         inflpts[i] = find_zeros(deriv2f,lowlim,uplim)
     end
-
+ 
     return statpts,inflpts
 end
 
