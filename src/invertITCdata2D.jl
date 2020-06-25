@@ -100,8 +100,11 @@ $(TYPEDFIELDS)
 
 """
 struct BetaMix2D
+    "structure containing the parameters of the 2D Beta functions"
     betpar::ScaledBeta2DParams
+    "2D array where each column is a set of mode, confidence and amplitude parameters"
     modkonamp::Matrix{<:Real}
+    "name of the protein"
     protein::String
 end
   

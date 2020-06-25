@@ -5,9 +5,9 @@ Author = "Andrea Zunino"
 
 # ANISPROU
 
-ANalysis of ISothermal titration calorimetry data on sodium dodecyl sulphate (SDS) mediated PRotein Unfolding.
+ANalysis of ISothermal titration calorimetry data on sodium dodecyl sulphate mediated PRotein Unfolding.
 
-Analysis of isothermal titration calorimetry (ITC) data on SDS mediated protein unfolding (ANISPROU) is a tool developed to globally fit an entire dataset and to extract thermodynamic values from this fit. ITC data on SDS mediated protein unfolding, at different protein concentrations, is used as an input for the fitting. The linearity of the features in the ITC data as a function of protein concentration allows the data to be fitted using a number of 3D beta functions, each representing a thermodynamic event. Besides the enthalpy of unfolding, the binding isotherm is also among the outputs. 
+Analysis of isothermal titration calorimetry (ITC) data on sodium dodecyl sulphate (SDS) mediated protein unfolding (ANISPROU) is a tool developed to globally fit an entire dataset and to extract thermodynamic values from this fit. ITC data on SDS mediated protein unfolding, at different protein concentrations, is used as an input for the fitting. The linearity of the features in the ITC data as a function of protein concentration allows the data to be fitted using a number of 3D beta functions, each representing a thermodynamic event. Besides the enthalpy of unfolding, the binding isotherm is also among the outputs. 
 
 
 Contents:
@@ -51,7 +51,7 @@ The file names must follow the following rules:
 
 Two optional parameters can be passed to [`readallexperiments`](@ref), namely `scalfactor` (defaulting to 0.004184 to convert Cal/mol to kJ/mol) which scales the enthalpy values, and `discninitrows` (defaulting to 2) which skips a certain  number of initial rows from the data set because usually initial data are affected by strong instrument noise which could bias the subsequent fitting process.  See [`readallexperiments`](@ref) to adapt it to a different case.
 
-Then extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
+Next step is to extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
 ```@example procITC
 using PyPlot # hide
 using ANISPROU

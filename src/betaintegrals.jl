@@ -10,10 +10,10 @@ arguments.
 
 # Arguments
 
--`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+- `betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
             the modes, confidence parameters and amplitudes and protein name
--`protcon`: protein concentration value (y axis) at which to perform the calculation of the area
--`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+- `protcon`: protein concentration value (y axis) at which to perform the calculation of the area
+- `volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
 function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0)
@@ -74,10 +74,10 @@ Calculate the area of each individual Beta function for a set of  protein concen
 
 # Arguments
 
--`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+- `betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
             the modes, confidence parameters and amplitudes and protein name
--`protcosn`: array of protein concentrations at which to calculate the areas
--`volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+- `protcosn`: array of protein concentrations at which to calculate the areas
+- `volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
 function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal::Real=203.0,
@@ -109,11 +109,11 @@ arguments.
 
 # Arguments
 
--`betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
+- `betamix`: structure of type `BetaMix2D` containing the parameters of the Beta functions, 
             the modes, confidence parameters and amplitudes and protein name
--`minprotcon`: lower bound of protein concentration value (y axis) to perform the integral
--`maxprotcon`: upper bound of protein concentration value (y axis) to perform the integral
--`volumescal`=203.0: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
+- `minprotcon`: lower bound of protein concentration value (y axis) to perform the integral
+- `maxprotcon`: upper bound of protein concentration value (y axis) to perform the integral
+- `volumescal`=203.0: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
 function volume_enthalpy(betamix::BetaMix2D,minprotcon::Real,maxprotcon::Real ; volumescal::Real=203.0)
