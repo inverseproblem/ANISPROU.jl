@@ -56,10 +56,11 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String} ;
         # select only files starting with
         checkfile(x) = (occursin(proteinnames[p],x) && endswith(x,".DAT"))
         fllist = filter(checkfile,fllist)
-        println(" file list: \n$(fllist)")
+        println(" Input file list: ")
 
         startind = 1
         for fl in fllist
+            println("  $fl")
 
             seflname = joinpath(inpdir,proteinnames[p]*"/"*fl)
             csds1,cpro1,ceout1 = readsingleexperiment(seflname)

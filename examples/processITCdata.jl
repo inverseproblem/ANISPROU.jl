@@ -13,6 +13,9 @@ function launchall()
     protein = "IM7"
     betamix,dobs = invertITCdata(inpdir,protein)
 
+    # ## plot straight lines defined by parameters as a function of concentration
+    # plotparamlines(betamix)
+
     ### plot single components for fixed protein concentration
     # plotbetacomp1D(betamix,maximum(dobs.sdsprotcon[:,2]))
     # plotbetacomp1D(betamix,0.148)
@@ -20,16 +23,17 @@ function launchall()
 
     # plot 3D surface from results
     if  isdefined(@__MODULE__,:Makie)
-        plotsurface3D(dobs,betamix,yscal=70)
+        plotsurface3D(dobs,betamix,yscal=70,ymin=0.0)
     end
 
-    ## plot fit to single experiments
-    outdir="figs"
-    plotsingleexperiments(outdir,dobs,betamix)
+    # ## plot fit to single experiments
+    # outdir="figs"
+    # plotsingleexperiments(outdir,dobs,betamix)
 
-    ## construct binding isotherm for Beta mix using stationary and inflection points
-    freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
-        
+    # ## construct binding isotherm for Beta mix using stationary and inflection points
+    # freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
+
+       
     ## compute area for all Beta components at
     ##   requested protein concentration
     protcon = 0.08
@@ -39,7 +43,13 @@ function launchall()
     ## Area for a set of protein concentrations
     N = 15
     protcons = collect(LinRange(0.0,0.14,N))
-    areas,erras = areasvsprotcon(betamix,protcons,doplot=true)
+    areas,erras = areasvsprotcon(betamix,protcons)
+
+    ## plot areas only
+    # plotareavsprotcon(protcons,areas)
+    ## plot parameters lines and areas
+    plotparamlines(betamix,protcons,areas)
+
 
     ## compute volume for all Beta components within
     ##   requested bounds of protein concentration
@@ -81,7 +91,7 @@ function invertITCdata(inpdir::String,protein::String)
 
     ##=========================
     ## forward test
-    a = 0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
+    a = 0.0 #0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
     b = 1.05*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
     minprotcon = minimum(dobs.sdsprotcon[:,2]) 
@@ -139,9 +149,9 @@ function invertITCdata(inpdir::String,protein::String)
     ## Elements are: 2 for mode, 2 for the confidence parameter and
     ##   2 for the amplitude parameter
     ## lower constraints 
-    lowc = [betpar.a,  betpar.a, 2.1, 2.1, -20.0, -20.0]
+    lowc = [betpar.a,  betpar.a, 10.1, 10.1, -20.0, -20.0]
     ## upper constraints
-    upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
+    upc  = [betpar.b, betpar.b, 5000.0, 5000.0, 10.0, 10.0]
 
     lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 
@@ -156,8 +166,10 @@ function invertITCdata(inpdir::String,protein::String)
     invCd = inv(Cd)
 
     ## IPNewton from Optim.jl, box constraints
+    lagmularea = nothing
     outdir = "output"
-    betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
+    betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,
+                           outdir,applynonlinconstr=true)
     
     ##================================
     ## plot results

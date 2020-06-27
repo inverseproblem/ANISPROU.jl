@@ -56,6 +56,7 @@ function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0
         bbeta = bp.b
         ## get the values of model parameters at y=ycur
         mode,kon,amp = getmodparbeta(bp,mcur,protcon)
+        #@show c,mode,kon,amp,protcon
 
         integr[c],err[c] = hquadrature(x->scaledbeta(mode,kon,abeta,bbeta,amp,x),abeta,bbeta,
                                        reltol=1e-8,abstol=0,maxevals=0)
@@ -80,19 +81,14 @@ Calculate the area of each individual Beta function for a set of  protein concen
 - `volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
-function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal::Real=203.0,
-                        doplot::Bool=true)
-
+function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal::Real=203.0)
+                        
     N=length(protcons)
     ncomp = size(betamix.modkonamp,2)
     areas = zeros(N,ncomp)
     errar = zeros(N,ncomp)
     for i=1:N
         areas[i,:],errar[i,:] = area_enthalpy(betamix,protcons[i],volumescal=volumescal)
-    end
-    
-    if doplot
-        plotareavsprotcon(protcons,areas)
     end
 
     return areas,errar

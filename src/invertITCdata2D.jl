@@ -132,9 +132,11 @@ function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
             upconstr[i,c] = upc[i]
         end
     end
-    
-    # @show mstart.<=lowconstr
-    # @show mstart.>=upconstr
+
+    @show lowconstr
+    @show upconstr
+    @show mstart.<=lowconstr
+    @show mstart.>=upconstr
 
     ## check mstart...
     @assert all(mstart.>=lowconstr)
@@ -144,6 +146,35 @@ function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
 end
 
 ######################################################################
+
+"""
+$(TYPEDSIGNATURES)
+
+Calculate the sum of the misfit for observed (measured) and calculated data and 
+ the misfit of the integral of enthalpy (which should be zero) at zero protein 
+ concentration.
+"""
+function misfitfunctional(betpar::ScaledBeta2DParams,dobs::ITCObsData,
+                          invCd::Matrix{<:Real},mcur::Matrix{<:Real} )
+                          #lagmularea::Union{Real,Nothing}=nothing )
+
+    ## misfit to measured data for Beta functions
+    misflkl = misfitbeta2D(betpar,dobs,invCd,mcur)
+
+    # # total misfit
+    # if lagmularea==nothing
+    #     ## no area
+         misf = misflkl 
+    # else
+    #     ## enthalpy area
+    #     misfar = misfareaenth(betpar,mcur)
+    #     misf = misflkl + lagmularea*misfar
+    # end
+
+    return misf
+end
+
+###############################################################
 
 """
 $(TYPEDSIGNATURES)
@@ -162,10 +193,60 @@ function misfitbeta2D(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     tmp1 = invCd * difcalobs
     misflkl = 0.5 * dot(difcalobs,tmp1)
 
-    # total misfit
-    misf = misflkl 
+  return misflkl
+end
 
-    return misf
+###########################################################
+
+"""
+$(TYPEDSIGNATURES)
+
+Misfit functional for area of enthalpy (unscaled in this case): zero 
+ area at protein concentration equal to zero.
+"""
+function misfareaenth(betpar::ScaledBeta2DParams,mcur2d::Matrix{<:Real})
+
+    ## set the constraint of zero area at protcon=0.0
+    protcon = 0.0 
+    ncomp = size(mcur2d,2)
+    integr = zeros(Real,ncomp)
+    err = zeros(ncomp)
+
+    for c=1:ncomp
+        mcur = mcur2d[:,c]
+        @assert length(mcur)==betpar.nummodpar
+    
+        ##---------------------------------------------------------
+        # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
+        #                     reltol=1e-8, abstol=0, maxevals=0)
+        abeta = betpar.a
+        bbeta = betpar.b
+        ## get the values of model parameters at y=ycur
+        mode,kon,amp = getmodparbeta(betpar,mcur,protcon)
+
+        #integr[c] = (1.0/kon) * amp * mode
+
+        # inte,err = hquadrature(x->scaledbeta(mode,kon,abeta,bbeta,amp,x),abeta,bbeta,
+        #                                reltol=1e-8,abstol=0,maxevals=0)
+        
+        ## gaussian quadrature
+        Npts = 500
+        qtpts,weights = gauss(Npts,abeta,bbeta)
+        # if !( abeta<=mode<=bbeta) || kon<=2.0
+        #     plotparamlines(BetaMix2D(betpar,mcur2d,"boh"))
+        # end
+
+        @assert all(abeta.<=qtpts.<=bbeta)
+        @assert abeta<=mode<=bbeta
+        @assert kon>2.0
+     
+        nodes = [scaledbeta(mode,kon,abeta,bbeta,amp,x) for x in qtpts]
+        integr[c] = dot( weights, nodes )
+  
+    end
+
+    areanorm = sum(abs.(integr))  ## <<<<<===========  CHECK CHECK CHECK!!
+    return areanorm
 end
 
 ###########################################################
@@ -285,10 +366,6 @@ end
 @inline function scaledbeta(mo::Real,kon::Real,a::Real,b::Real,
                             amplscale::Real,x::Real)
 
-    if a > mo || mo > b
-        @show mo,kon,amplscale,a,b
-    end
-    
     @assert b>a
     @assert a <= mo <= b
     ## keep kon at >2.0 instead of >=2.0 to avoid weird shapes...
@@ -348,7 +425,7 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
 function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
                       invCd::Matrix{<:Real},mstart::Matrix{<:Real},
                       lowconstr::Vector{<:Real},upconstr::Vector{<:Real},
-                      outdir::String)  
+                      outdir::String; applynonlinconstr=false)  
 
     # References
 
@@ -383,26 +460,138 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     
     function closmisfitOPTIM(clmcur::Vector{<:Real})
         clmcur2d=reshape(clmcur,betpar.nummodpar,ncomp)
-        msf = misfitbeta2D(betpar,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
+        msf = misfitfunctional(betpar,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
         return msf
     end
 
     #------------------------------------------------
 
-    function fun_grad!(gr,mcur) 
-        ## gradient of the misfit function
-        gr .= ForwardDiff.gradient(closmisfitOPTIM,mcur)
-        return nothing
-    end
+    # function fun_grad!(gr,mcur) 
+    #     ## gradient of the misfit function
+    #     gr .= ForwardDiff.gradient(closmisfitOPTIM,mcur)
+    #     return nothing
+    # end
 
-    #------------------------------------------------
+    # #------------------------------------------------
     
-    function fun_hess!(hess,mcur) 
-        ## Hessian of the misfit function
-        hess .= ForwardDiff.hessian(closmisfitOPTIM,mcur)
-        return nothing
-    end
+    # function fun_hess!(hess,mcur) 
+    #     ## Hessian of the misfit function
+    #     hess .= ForwardDiff.hessian(closmisfitOPTIM,mcur)
+    #     return nothing
+    # end
  
+    #------------------------------------------------
+    #------------------------------------------------
+
+    if applynonlinconstr
+
+        function modeconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ycur = 0.0
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
+            return mode
+        end
+
+        function konconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ycur = 0.0
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
+            return kon
+        end
+
+        #------------------------------------------------
+
+        function funcon_c(betpar,ccmcur) #ccmcur::Vector{<:Real})
+            ncomp = div(length(ccmcur),betpar.nummodpar)
+            npar = betpar.nummodpar
+            cstfun = Array{Any,1}(undef,ncomp+1+ncomp)
+
+            ## constraintS on mode at [protein]=0
+            ycur = 0.0
+            ifun = 1
+            for ic=1:ncomp
+                cstfun[ifun] = ccmcur->modeconstraint(betpar,ic,ccmcur)
+                ifun+=1
+            end
+
+            ## constraint on area
+            cstfun[ifun] = ccmcur-> begin
+                mcur2d = reshape(ccmcur,npar,ncomp)
+                misfareaenth(betpar,mcur2d)
+            end
+            ifun+=1
+
+            ## other constraints at [protein]=0
+            for ic=1:ncomp
+                cstfun[ifun] = ccmcur->konconstraint(betpar,ic,ccmcur)
+                ifun+=1
+            end
+
+            return cstfun
+        end
+
+        ## actually create the functions
+        cstfun = funcon_c(betpar,vec(mstart))
+
+        #-------------------------------
+
+        function con_c!(cst,ccmcur::Vector{<:Real})
+            N=length(cstfun)
+            #@show N
+            for i=1:N
+                cst[i] = cstfun[i](ccmcur)
+            end
+            return cst
+        end
+
+        #-------------------------------
+
+        ncomp = size(mstart,2)
+        lnlc = zeros(ncomp+1+ncomp)
+        lnlc[ncomp+1+1:end] .= 2.5 # kon constr.
+        unlc = [betpar.b,betpar.b,betpar.b,betpar.b,
+                0.0,
+                500.0,500.0,500.0,500.0]
+                
+
+        #@show size(lnlc),size(unlc)
+        cst = zeros(Real,length(lnlc))
+
+        function closcon_c(mcur::Vector{<:Real})
+            con_c!(cst,mcur)
+            #@show size(cst)
+            return cst
+        end
+
+        #------------------------------------------------
+
+        function con_jacob!(jac,mcur)
+            #@show size(jac),size(mcur)
+            jac .= ForwardDiff.jacobian(closcon_c,mcur)
+            return nothing
+        end
+
+        #------------------------------------------------
+        
+        function con_hess!(hess,mcur, λ)
+            ## IPNewton needs one Hessian per constraint
+            #@show size(hess),size(mcur),size(λ)
+            # Hessian for each single constraint
+            N=length(λ)
+            for i=1:N
+                hess .+= λ[i] .* ForwardDiff.hessian(cstfun[i],mcur)
+            end
+            return nothing
+        end
+
+        #------------------------------------------------
+        
+    end
+    
     ##===================================================
     ## Some checks
     @assert issymmetric(invCd)
@@ -417,10 +606,17 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     ncomp = size(mstart,2)
     
     ## Objective function without constraints
-    df = TwiceDifferentiable(closmisfitOPTIM, fun_grad!, fun_hess!, mstartvec)
-
+    df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) #fun_grad!, fun_hess!, mstartvec)
+    
     ## Add constraints
-    dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
+    if applynonlinconstr
+        # linear and NONlinear constraints
+        dfc = TwiceDifferentiableConstraints(con_c!, con_jacob!, con_hess!,
+                                             lowconstr, upconstr, lnlc, unlc)
+    else
+        # linear constraints only
+        dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
+    end
 
     ## Run the Newton inversion with box minimization
     println("\nRunning optimization with IPNewton...")

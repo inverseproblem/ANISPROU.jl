@@ -170,9 +170,10 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Plot the lines defined by the modes.
+Plot the lines defined by the modes (default) or, optionally, other 
+  parameters (see `firstidpar`).
 """
-function plotmodelines(betpar,mcur,modname)
+function plotmodelines(betpar,mcur,modname; firstidpar=1)
     Npoints = 40
     ncomp = size(mcur,2)
     ym = LinRange(betpar.ymin,betpar.ymax,Npoints)
@@ -181,6 +182,8 @@ function plotmodelines(betpar,mcur,modname)
         # s2 = (i-1)*betpar.nummodpar + 2 
         x1 = betpar.ymin
         x2 = betpar.ymax
+        i2 = firstidpar+1
+        i1 = firstidpar
         xm = (mcur[2,i].-mcur[1,i])./(x2.-x1).*(ym.-x1) .+ mcur[1,i] 
         if i==ncomp
             plot(xm,ym,"-k",linewidth=0.7,label="mode $modname")
@@ -192,6 +195,76 @@ function plotmodelines(betpar,mcur,modname)
     legend()
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+end
+
+############################################
+
+"""
+$(TYPEDSIGNATURES)
+
+Plot the lines defined by the model parameters as a function of protein concentration.
+"""
+function plotparamlines(betamix,protcons=nothing,areas=nothing)
+
+    betpar = betamix.betpar
+    mcur = betamix.modkonamp
+    
+    @assert betpar.modefuny=="linear"
+    @assert betpar.konfuny=="linear"
+    @assert betpar.ampfuny=="linear"
+
+    Npoints = 100
+    ncomp = size(mcur,2)
+    xm = LinRange(0.0,betpar.ymax,Npoints)
+    parname = ["mode","confidence par.","amplitude"]
+
+
+    figure(figsize=(12,9))
+    for ip=1:3
+
+        subplot(2,2,ip)
+        title("$(parname[ip])")
+        xlabel("Protein concentration")
+        axvline(betpar.ymin,color="black")
+        axvline(betpar.ymax,color="black")
+
+        if ip==1
+            axhline(betpar.a,color="black")
+            axhline(betpar.b,color="black")
+        end
+
+        for i=1:ncomp
+            firstidpar = (ip-1)*2+1
+            x1 = betpar.ymin
+            x2 = betpar.ymax
+            i2 = firstidpar+1
+            i1 = firstidpar
+            ym = (mcur[i2,i].-mcur[i1,i])./(x2.-x1).*(xm.-x1) .+ mcur[i1,i] 
+
+            plot(xm,ym,"-",linewidth=1,label="comp. $i")
+            plot(xm[[1,end]],ym[[1,end]],".k",markersize=5.0)
+
+        end
+        legend()
+        
+        # xlim([-2,betpar.b])
+        # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+    end
+
+    if areas!=nothing
+        subplot(224)
+        title("Areas of single components")
+        for i=1:ncomp
+            plot(protcons,areas[:,i],"o-",label="Beta comp. #$i")
+        end
+        legend()
+        xlabel("Protein concentration [mM]")
+        ylabel("Area [kJ]")
+    end
+
+    tight_layout()
+
+    return
 end
 
 #####################################################
@@ -456,7 +529,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-    """
+"""
 function plotareavsprotcon(protcons,areas)
     ncomp = size(areas,2)
     figure()

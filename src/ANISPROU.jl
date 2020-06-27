@@ -22,7 +22,7 @@ using ForwardDiff
 using HDF5
 using LinearAlgebra
 using Roots
-using Cubature
+using Cubature,QuadGK
 using Optim
 using PyPlot 
 using WriteVTK
@@ -40,7 +40,7 @@ export calcfreeSDSNbound
 export area_enthalpy,volume_enthalpy,areasvsprotcon
 export plotbindisotherm,plotfoundfeatures
 export plotareavsprotcon,plotbetacomp1D
-
+export plotparamlines
 
 include("readITCdata.jl")
 include("invertITCdata2D.jl")

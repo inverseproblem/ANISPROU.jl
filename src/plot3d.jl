@@ -7,7 +7,7 @@ $(TYPEDSIGNATURES)
 Plot the a 3D surface from the Beta mix together measured data as circles.
 """
 function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.px,
-                       displayscene=true)
+                       displayscene=true, ymin=nothing)
 
     println("\nPlotting 3D surface from Beta mix and measured data as circles.")
     println(" Scaling factors are $yscal for [$(dobs.protein)] and $zscal for enthalpy.")
@@ -15,7 +15,9 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.
     N = 300
     xmin = betamix.betpar.a
     xmax = betamix.betpar.b
-    ymin = betamix.betpar.ymin
+    if ymin==nothing
+        ymin = betamix.betpar.ymin
+    end
     ymax = betamix.betpar.ymax
 
     xv = collect(LinRange(xmin,xmax,N))
