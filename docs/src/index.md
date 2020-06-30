@@ -19,12 +19,19 @@ Pages = ["index.md"]
 # Installation
 
 To install the package simple enter into the package manager mode in Julia by typing "`]`" at the REPL prompt and then use `add`, i.e.,
-```
+```julia
 (v1.4) pkg> add ANISPROU
 ```
 The package will be automatically downloaded from the web and installed.
 
+!!! note
 
+    At the moment the package is not yet registered in the official Julia registry, so, 
+    to install it run the following in package mode:
+		
+    ```julia
+    (v1.4) pkg> add https://github.com/inverseproblem/ANISPROU.jl
+    ```
 
 
 # Tutorial
@@ -44,16 +51,17 @@ If using the [`readallexperiments`](@ref) function, the directory containing the
 50uMIM7highSDS_4.DAT
 75uMIM7highSDS_3.DAT
 ```
-The file names must follow the following rules:
+where the file names must follow the following rules:
 - they must end with ".DAT"
 - they must contain the name of protein (e.g., "IM7") in the file name
 - the file format must be the same than the provided example (a commonly used instrument).
 
-Two optional parameters can be passed to [`readallexperiments`](@ref), namely `scalfactor` (defaulting to 0.004184 to convert Cal/mol to kJ/mol) which scales the enthalpy values, and `discninitrows` (defaulting to 2) which skips a certain  number of initial rows from the data set because usually initial data are affected by strong instrument noise which could bias the subsequent fitting process.  See [`readallexperiments`](@ref) to adapt it to a different case.
+Two optional parameters can be passed to [`readallexperiments`](@ref), namely `scalfactor` (defaulting to 0.004184 to convert Cal/mol to kJ/mol) which scales the enthalpy values, and `discninitrows` (defaulting to 0) which skips a certain  number of initial rows from the data set because usually initial data are affected by strong instrument noise which could bias the subsequent fitting process.  See [`readallexperiments`](@ref) to adapt it to a different case.
 
 Next step is to extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
 ```@example procITC
 using PyPlot # hide
+PyPlot.ioff() # hide
 using ANISPROU
 
 inpdir="../../examples/inputdata/" # directory containing input data
@@ -165,7 +173,12 @@ outdir = "output"
 betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
 nothing # hide
 ```
-The output `betamix` is a structure of type [`BetaMix2D`](@ref) which holds the optimized parameters and other additional information.
+The output `betamix` is a structure of type [`BetaMix2D`](@ref) which holds the optimized parameters and other additional information. The function [`solveinvprob`](@ref) accepts an **additional optional parameter** `applynonlinconstr` which, when set to `true` adds a set of nonlinear constraints to the Newton optimization. These constraints are a zero (or minimum) area for each Beta component at protein concentration equal to zero and some other constraints on the modes and confidence parameters.
+
+!!! danger "Needs expansion"
+
+    **Expand this section: nonlinear constraints**
+	
 
 Finally, it is possible to visualize the results as following:
 ```@example procITC
@@ -312,7 +325,8 @@ It is also possible to calculate the area for each Beta component for a set of d
 ```@example procITC
 N = 15
 protcons = collect(LinRange(0.0,0.14,N)) # set of protein concentrations
-areas,erras = areasvsprotcon(betamix,protcons,doplot=true)
+areas,erras = areasvsprotcon(betamix,protcons)
+plotareavsprotcon(protcons,areas) # plot area as a function of protein concentration
 savefig("plotsetareas.svg") # hide
 nothing # hide
 ```	
@@ -357,6 +371,7 @@ saveresultVTK
 plotsurface3D
 plotareavsprotcon
 plotbetacomp1D
+plotparamlines
 ```
 
 # Other non exported functions
@@ -366,8 +381,11 @@ ANISPROU.plotmodelines
 ANISPROU.getmodparbeta
 ANISPROU.forwmod2D
 ANISPROU.readsingleexperiment
-ANISPROU.scaledbeta
-ANISPROU.misfitbeta2D
 ANISPROU.singlescaledbeta2D 
+ANISPROU.scaledbeta
+ANISPROU.misfitfunctional
+ANISPROU.misfareaenth
+ANISPROU.misfitbeta2D
+
 ```
 

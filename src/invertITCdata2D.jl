@@ -212,6 +212,14 @@ function misfareaenth(betpar::ScaledBeta2DParams,mcur2d::Matrix{<:Real})
     integr = zeros(Real,ncomp)
     err = zeros(ncomp)
 
+    abeta = betpar.a
+    bbeta = betpar.b
+
+    ## Using Gaussian quadrature from QuadGK instead of Cubature to make ForwardDiff work
+    Npts = 500
+    qtpts,weights = gauss(Npts,abeta,bbeta)
+
+
     for c=1:ncomp
         mcur = mcur2d[:,c]
         @assert length(mcur)==betpar.nummodpar
@@ -219,27 +227,19 @@ function misfareaenth(betpar::ScaledBeta2DParams,mcur2d::Matrix{<:Real})
         ##---------------------------------------------------------
         # (val,err) = hquadrature(f::Function, xmin::Real, xmax::Real;
         #                     reltol=1e-8, abstol=0, maxevals=0)
-        abeta = betpar.a
-        bbeta = betpar.b
+      
         ## get the values of model parameters at y=ycur
         mode,kon,amp = getmodparbeta(betpar,mcur,protcon)
-
-        #integr[c] = (1.0/kon) * amp * mode
-
-        # inte,err = hquadrature(x->scaledbeta(mode,kon,abeta,bbeta,amp,x),abeta,bbeta,
-        #                                reltol=1e-8,abstol=0,maxevals=0)
         
-        ## gaussian quadrature
-        Npts = 500
-        qtpts,weights = gauss(Npts,abeta,bbeta)
-        # if !( abeta<=mode<=bbeta) || kon<=2.0
-        #     plotparamlines(BetaMix2D(betpar,mcur2d,"boh"))
-        # end
-
         @assert all(abeta.<=qtpts.<=bbeta)
+        # if !(abeta<=mode<=bbeta)
+        #     betami = BetaMix2D(betpar,mcur2d,"boh")
+        #     plotparamlines(betami)
+        # end
         @assert abeta<=mode<=bbeta
         @assert kon>2.0
-     
+
+        ## gaussian quadrature
         nodes = [scaledbeta(mode,kon,abeta,bbeta,amp,x) for x in qtpts]
         integr[c] = dot( weights, nodes )
   
@@ -403,6 +403,9 @@ end
 
 ###############################################################################
 
+
+###############################################################################
+
 """
 $(TYPEDSIGNATURES)
 
@@ -420,6 +423,8 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
 - `lowconstr`: lower constraints
 - `upconstr`: upper constraints
 - `outdir`: output directory to save results
+- `applynonlinconstr`=false: optional parameter determining whether to use or 
+                             not the nonlinear constraints
 
 """
 function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
@@ -502,32 +507,75 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
             mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
             return kon
         end
+        
+        function ampconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ycur = 0.0
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
+            return amp
+        end
+        
+        function areaconstraint(betpar,ccmcur)
+            ncomp = div(length(ccmcur),betpar.nummodpar)
+            npar = betpar.nummodpar
+            mcur2d = reshape(ccmcur,npar,ncomp)
+            mar = misfareaenth(betpar,mcur2d)
+            return mar
+        end
+
+        function angcoekonconstraint(betpar,ic::Integer,ccmcur)\
+            @assert betpar.konfuny=="linear"
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            konval = ccmcur2d[3:4,ic]
+            ymin = betpar.ymin
+            ymax = betpar.ymax
+            kangcoe = (konval[2]-konval[1])/(ymax-ymin)
+            return kangcoe
+        end
 
         #------------------------------------------------
 
         function funcon_c(betpar,ccmcur) #ccmcur::Vector{<:Real})
             ncomp = div(length(ccmcur),betpar.nummodpar)
             npar = betpar.nummodpar
-            cstfun = Array{Any,1}(undef,ncomp+1+ncomp)
+            cstfun = Array{Any,1}(undef,0) #ncomp+ncomp+1)
 
             ## constraintS on mode at [protein]=0
             ycur = 0.0
             ifun = 1
             for ic=1:ncomp
-                cstfun[ifun] = ccmcur->modeconstraint(betpar,ic,ccmcur)
+                acfun = ccmcur->modeconstraint(betpar,ic,ccmcur)
+                push!(cstfun,acfun)
                 ifun+=1
             end
 
-            ## constraint on area
-            cstfun[ifun] = ccmcur-> begin
-                mcur2d = reshape(ccmcur,npar,ncomp)
-                misfareaenth(betpar,mcur2d)
+            ## constraints on kon at [protein]=0
+            for ic=1:ncomp
+                acfun = ccmcur->konconstraint(betpar,ic,ccmcur)
+                push!(cstfun,acfun)
+                ifun+=1
             end
+
+            # ## constraints on amp at [protein]=0
+            # for ic=1:ncomp
+            #     acfun = ccmcur->ampconstraint(betpar,ic,ccmcur)
+            #     push!(cstfun,acfun)
+            #     ifun+=1
+            # end
+            
+            ## constraint on area
+            acfun = ccmcur-> areaconstraint(betpar,ccmcur)
+            push!(cstfun,acfun)
             ifun+=1
 
-            ## other constraints at [protein]=0
+            # angular coefficient for kon parameter being negative (shrinking functions)
             for ic=1:ncomp
-                cstfun[ifun] = ccmcur->konconstraint(betpar,ic,ccmcur)
+                acfun = ccmcur->angcoekonconstraint(betpar,ic,ccmcur)
+                push!(cstfun,acfun)
                 ifun+=1
             end
 
@@ -541,24 +589,29 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
 
         function con_c!(cst,ccmcur::Vector{<:Real})
             N=length(cstfun)
-            #@show N
             for i=1:N
                 cst[i] = cstfun[i](ccmcur)
             end
             return cst
         end
 
-        #-------------------------------
-
+        ##===================================
+        ## Set NONlinear constratints        
         ncomp = size(mstart,2)
-        lnlc = zeros(ncomp+1+ncomp)
-        lnlc[ncomp+1+1:end] .= 2.5 # kon constr.
-        unlc = [betpar.b,betpar.b,betpar.b,betpar.b,
-                0.0,
-                500.0,500.0,500.0,500.0]
-                
+        maxamp = 1.0
 
-        #@show size(lnlc),size(unlc)
+        lnlc = [zeros(ncomp)...,     # constr. on mode at [prot]==0
+                2.5*ones(ncomp)...,  # constr. on kon at [prot]==0
+                #-maxamp*ones(ncomp)..., # constr. on amp at [prot]==0
+                0.0,                 # constr. on area
+                -Inf*ones(ncomp)...] # constr. on angular coeff. of kon being negative
+
+        unlc = [betpar.b*ones(ncomp)..., # constr. on mode at [prot]==0
+                Inf*ones(ncomp)...,      # constr. on kon at [prot]==0
+                #maxamp*ones(ncomp)...,      # constr. on amp at [prot]==0
+                0.0,                     # constr. on area
+                0.0*ones(ncomp)...]      # constr. on angular coeff. of kon being negative
+        
         cst = zeros(Real,length(lnlc))
 
         function closcon_c(mcur::Vector{<:Real})
@@ -567,6 +620,23 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
             return cst
         end
 
+        ##===================================
+
+        function checknonlinconstr(betpar,cst,lnlc,unlc,mstvec,protein)
+            cst = con_c!(cst,mstvec)
+            fulfillconstr = all(lnlc.<=cst.<=unlc)
+            # if !fulfillconstr
+            #     npar = betpar.nummodpar
+            #     ncomp = div(length(mstvec),npar)
+            #     mst = reshape(mstvec,npar,ncomp)
+            #     betami = BetaMix2D(betpar,mst,protein)
+            #     plotparamlines(betami)
+            #     println(lnlc.<=cst.<=unlc)
+            # end
+            return fulfillconstr
+        end
+
+        ##===============================================
         #------------------------------------------------
 
         function con_jacob!(jac,mcur)
@@ -580,7 +650,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
         function con_hess!(hess,mcur, λ)
             ## IPNewton needs one Hessian per constraint
             #@show size(hess),size(mcur),size(λ)
-            # Hessian for each single constraint
+            # one Hessian for each single constraint
             N=length(λ)
             for i=1:N
                 hess .+= λ[i] .* ForwardDiff.hessian(cstfun[i],mcur)
@@ -590,14 +660,8 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
 
         #------------------------------------------------
         
-    end
-    
-    ##===================================================
-    ## Some checks
-    @assert issymmetric(invCd)
-    @assert isposdef(invCd)
-
-    
+    end # if applynonlinconstraints
+        
     ##===================================================
     ## https://julianlsolvers.github.io/Optim.jl/stable/#examples/generated/ipnewton_basics/
     
@@ -605,11 +669,29 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     mstartvec = vec(mstart)
     ncomp = size(mstart,2)
     
+    ##===================================================
+    ## Some checks
+    @assert issymmetric(invCd)
+    @assert isposdef(invCd)
+    mode,kon,amp = getmodparbeta(betpar,mstartvec,0.0)
+    if mode<betpar.a
+        betami = BetaMix2D(betpar,mstart,dobs.protein)
+        plotparamlines(betami)
+        error("solveinvprob(): mode<betpar.a at protein concentration=0.0 from the starting model.")
+    end
+
+    ##===================================================
     ## Objective function without constraints
     df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) #fun_grad!, fun_hess!, mstartvec)
     
     ## Add constraints
     if applynonlinconstr
+        # check if starting model fulfills nonlinear constraints
+        fullfillconstr = checknonlinconstr(betpar,cst,lnlc,unlc,mstartvec,dobs.protein)
+        @show fullfillconstr
+        # if !fullfillconstr
+        #     error("solveinvprob(): NONlinear constraints not fuldilled by starting model")
+        # end
         # linear and NONlinear constraints
         dfc = TwiceDifferentiableConstraints(con_c!, con_jacob!, con_hess!,
                                              lowconstr, upconstr, lnlc, unlc)
@@ -620,9 +702,10 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
 
     ## Run the Newton inversion with box minimization
     println("\nRunning optimization with IPNewton...")
-    result = optimize(df, dfc, mstartvec, IPNewton())
+    result = optimize(df, dfc, mstartvec, IPNewton(), Optim.Options(store_trace=true))
     mpostvec = Optim.minimizer(result)
-
+    ## https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/
+    
     ## reshape mpost
     mpost = reshape(mpostvec,size(mstart))
 
@@ -641,10 +724,12 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
         nothing
     end
 
-    outfile = joinpath(outdir,dobs.protein*"_ITCresults.h5")
+    ##-------------------------------------------------------
+    # save in HDF5 format
+    outfile1 = joinpath(outdir,dobs.protein*"_ITCresults.h5")
     println("Saving results to $outfile\n")
 
-    hf = h5open(outfile,"w")
+    hf = h5open(outfile1,"w")
     hf["protein"] = dobs.protein
     hf["mpost"] = mpost
     hf["enthalpy"] = dobs.enthalpy
@@ -663,6 +748,14 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     hf["konfuncy"]  = betpar.konfuny
     hf["ampfuncy"] = betpar.ampfuny
     close(hf)
+
+    ##-------------------------------------------------------
+    # save in plain text format
+    outfile2 = joinpath(outdir,dobs.protein*"_ITCresults.dat")
+    open(outfile2,"w") do io
+        writedlm(io, [x y])
+    end
+
 
     return betmix
 end

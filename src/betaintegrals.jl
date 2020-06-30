@@ -61,6 +61,14 @@ function area_enthalpy(betamix::BetaMix2D,protcon::Real ; volumescal::Real=203.0
         integr[c],err[c] = hquadrature(x->scaledbeta(mode,kon,abeta,bbeta,amp,x),abeta,bbeta,
                                        reltol=1e-8,abstol=0,maxevals=0)
 
+        
+        # ## gaussian quadrature check
+        # Npts = 500
+        # qtpts,weights = gauss(Npts,abeta,bbeta)
+        # nodes = [scaledbeta(mode,kon,abeta,bbeta,amp,x) for x in qtpts]
+        # gaussquad = dot( weights, nodes )
+        # @show gaussquad-integr[c]
+        
     end
 
     return integr,err

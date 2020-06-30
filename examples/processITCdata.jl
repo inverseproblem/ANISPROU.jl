@@ -26,9 +26,9 @@ function launchall()
         plotsurface3D(dobs,betamix,yscal=70,ymin=0.0)
     end
 
-    # ## plot fit to single experiments
-    # outdir="figs"
-    # plotsingleexperiments(outdir,dobs,betamix)
+    ## plot fit to single experiments
+    outdir="figs"
+    plotsingleexperiments(outdir,dobs,betamix)
 
     # ## construct binding isotherm for Beta mix using stationary and inflection points
     # freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
@@ -112,7 +112,7 @@ function invertITCdata(inpdir::String,protein::String)
     ## Used to visualise the calculated data from the initial guess
     ##   compared with the actual observed data, in order to manually
     ##   find a good initial model
-    onlytestinitialguess = false
+    onlytestinitialguess = false #true
 
     ##===========================================
     ## Starting model
@@ -123,16 +123,20 @@ function invertITCdata(inpdir::String,protein::String)
         ##  Just add (remove) rows to increase (decrease) the number of components
         ## Elements are: 2 for mode, 2 for the confidence parameter and
         ##   2 for the amplitude parameter
-        comp1 = [0.6,  1.5,  30.0, 30.0, -2.5,  -5.0 ]  
+        comp1 = [0.6,  1.5,  35.0, 30.0, -2.5,  -5.0 ]  
         comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
-        comp3 = [4.0,  9.0,  40.0, 80.0, 0.12, 0.16 ] 
-        comp4 = [5.0,  12.0, 20.0, 50.0, -1.6, -2.0 ] 
-        # comp5 = [3.0,  7.0,  20.0, 50.0, 0.12552, 0.16736 ] # 30.0,   40.0]
-        # comp6 = [1.0,  3.0,  20.0, 50.0, -0.12552, -0.16736 ] # 30.0,   40.0]
-    end
+        comp3 = [4.5,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
+        comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ] 
+
+        # comp1 = [1.6,  1.5,  35.0, 30.0, -1.5,  -5.0 ]  
+        # comp2 = [2.7,  4.8,  60.0, 40.0, -0.6,  -4.0 ] 
+        # comp3 = [6.0,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
+        # comp4 = [8.0,  15.3, 60.0, 40.0, -1.0, -2.0 ] 
+
+     end
 
     ## mstart is a 2D array where each column represents one component
-    mstart = [comp1 comp2 comp3 comp4] #comp5 comp6]
+    mstart = [comp1 comp2 comp3 comp4] 
     @show size(mstart)
 
     ############################################
@@ -158,10 +162,10 @@ function invertITCdata(inpdir::String,protein::String)
     ###############################################
     ## run the Newton optimization
     nobs = length(dobs.enthalpy)
-    stdobs = 0.2 .* ones(nobs)   #2.0 .* ones(nobs)
-    # stdobs[1:2] .= 0.5
-    # stdobs[end-5:end] .= 5.5
-    # @show stdobs[1]
+    stdobs = 0.1 .* ones(nobs)   #2.0 .* ones(nobs)
+    stdobs[1:2] .= 0.5
+    #stdobs[end-5:end] .= 0.5
+    @show stdobs
     Cd = diagm(stdobs.^2)
     invCd = inv(Cd)
 

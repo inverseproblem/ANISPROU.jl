@@ -405,7 +405,7 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
     ##
     subplot(212)
     title("Binding isotherm for protein $protein")
-    plot(freeSDS,Nbound,"o-")
+    plot([0.0, freeSDS...],[0.0, Nbound...],"o-")
     xlabel("free SDS concentration [mM]")
     ylabel("Nbound")
 
