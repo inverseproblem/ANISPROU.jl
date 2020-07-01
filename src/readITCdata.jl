@@ -54,7 +54,7 @@ function readallexperiments(inpdir::String,proteinnames::Vector{String} ;
         # @show occursin(proteinnames[p],fllist[1])
         # @show endswith(fllist[1],".DAT")
         # select only files starting with
-        checkfile(x) = (occursin(proteinnames[p],x) && endswith(x,".DAT"))
+        checkfile(x) = (occursin(proteinnames[p],x) && ( endswith(x,".DAT") || endswith(x,".dat") ) )
         fllist = filter(checkfile,fllist)
         println(" Input file list: ")
 

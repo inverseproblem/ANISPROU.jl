@@ -31,7 +31,7 @@ using Requires
 
 export ScaledBeta2DParams,BetaMix2D,ITCObsData
 export readallexperiments
-export setconstraints,solveinvprob
+export solveinvprob
 export plotobsdata,plotinitialguess,plotresults
 export plotsingleexperiments
 export saveresultVTK

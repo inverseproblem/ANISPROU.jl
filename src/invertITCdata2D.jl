@@ -6,7 +6,7 @@ $(TYPEDEF)
 
 Structure containing the parameters of the 2D Beta functions.
 
-# Fields 
+# Fields  
 
 $(TYPEDFIELDS)
 
@@ -110,40 +110,40 @@ end
   
 ##############################################################
 
-"""
-$(TYPEDSIGNATURES)
+# """
+# $(TYPEDSIGNATURES)
 
-Set the constraints for the Newton optimization.
-"""
-function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
-                        lowc::Vector{<:Real},upc::Vector{<:Real})
+# Set the constraints for the Newton optimization.
+# """
+# function setconstraints(betpar::ScaledBeta2DParams,mstart::Matrix{<:Real},
+#                         lowc::Vector{<:Real},upc::Vector{<:Real})
 
-    lenm = size(mstart,1)
-    ncomp = size(mstart,2) #div(lenm,betpar.nummodpar)
+#     lenm = size(mstart,1)
+#     ncomp = size(mstart,2) #div(lenm,betpar.nummodpar)
 
-    lowconstr = zeros(betpar.nummodpar,ncomp)
-    upconstr = zeros(betpar.nummodpar,ncomp)
+#     lowconstr = zeros(betpar.nummodpar,ncomp)
+#     upconstr = zeros(betpar.nummodpar,ncomp)
 
-    #@show size(lowc),size(upc)
-    for c=1:ncomp
-        #c1 = (c-1)*betpar.nummodpar
-        for i=1:betpar.nummodpar
-            lowconstr[i,c] = lowc[i]
-            upconstr[i,c] = upc[i]
-        end
-    end
+#     #@show size(lowc),size(upc)
+#     for c=1:ncomp
+#         #c1 = (c-1)*betpar.nummodpar
+#         for i=1:betpar.nummodpar
+#             lowconstr[i,c] = lowc[i]
+#             upconstr[i,c] = upc[i]
+#         end
+#     end
 
-    @show lowconstr
-    @show upconstr
-    @show mstart.<=lowconstr
-    @show mstart.>=upconstr
+#     @show lowconstr
+#     @show upconstr
+#     @show mstart.<=lowconstr
+#     @show mstart.>=upconstr
 
-    ## check mstart...
-    @assert all(mstart.>=lowconstr)
-    @assert all(mstart.<=upconstr)
+#     ## check mstart...
+#     @assert all(mstart.>=lowconstr)
+#     @assert all(mstart.<=upconstr)
 
-    return vec(lowconstr),vec(upconstr)
-end
+#     return vec(lowconstr),vec(upconstr)
+# end
 
 ######################################################################
 
@@ -420,17 +420,19 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
             See [`ITCObsData`](@ref)
 - `invCd`: inverse of the covariance matrix on observations (precision matrix)
 - `mstart`: the starting model
-- `lowconstr`: lower constraints
-- `upconstr`: upper constraints
+- `lowconstr`: array of lower constraints for all parameters
+- `upconstr`: array of upper constraints for all parameters
 - `outdir`: output directory to save results
 - `applynonlinconstr`=false: optional parameter determining whether to use or 
                              not the nonlinear constraints
+- `constrarea`=0.0: a positive real number defining lower and upper constraints [-constrarea,constrarea] 
+                   for the value of area (enthalpy) at protein concentration equal to zero
 
 """
-function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
-                      invCd::Matrix{<:Real},mstart::Matrix{<:Real},
-                      lowconstr::Vector{<:Real},upconstr::Vector{<:Real},
-                      outdir::String; applynonlinconstr=false)  
+function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{<:Real},
+                      mstart::Matrix{<:Real},lowconstr::Matrix{<:Real},upconstr::Matrix{<:Real},
+                      outdir::String;
+                      applynonlinconstr::Bool=false,constrarea::Real=0.0)
 
     # References
 
@@ -471,19 +473,19 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
 
     #------------------------------------------------
 
-    # function fun_grad!(gr,mcur) 
-    #     ## gradient of the misfit function
-    #     gr .= ForwardDiff.gradient(closmisfitOPTIM,mcur)
-    #     return nothing
-    # end
+    function fun_grad!(gr,mcur) 
+        ## gradient of the misfit function
+        gr .= ForwardDiff.gradient(closmisfitOPTIM,mcur)
+        return nothing
+    end
 
-    # #------------------------------------------------
+    #------------------------------------------------
     
-    # function fun_hess!(hess,mcur) 
-    #     ## Hessian of the misfit function
-    #     hess .= ForwardDiff.hessian(closmisfitOPTIM,mcur)
-    #     return nothing
-    # end
+    function fun_hess!(hess,mcur) 
+        ## Hessian of the misfit function
+        hess .= ForwardDiff.hessian(closmisfitOPTIM,mcur)
+        return nothing
+    end
  
     #------------------------------------------------
     #------------------------------------------------
@@ -600,17 +602,17 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
         ncomp = size(mstart,2)
         maxamp = 1.0
 
-        lnlc = [zeros(ncomp)...,     # constr. on mode at [prot]==0
-                2.5*ones(ncomp)...,  # constr. on kon at [prot]==0
+        lnlc = [zeros(ncomp)...,      # constr. on mode at [prot]==0
+                2.5*ones(ncomp)...,   # constr. on kon at [prot]==0
                 #-maxamp*ones(ncomp)..., # constr. on amp at [prot]==0
-                0.0,                 # constr. on area
-                -Inf*ones(ncomp)...] # constr. on angular coeff. of kon being negative
+                0.0,          # constr. on area
+                -Inf*ones(ncomp)...]  # constr. on angular coeff. of kon being negative
 
         unlc = [betpar.b*ones(ncomp)..., # constr. on mode at [prot]==0
                 Inf*ones(ncomp)...,      # constr. on kon at [prot]==0
-                #maxamp*ones(ncomp)...,      # constr. on amp at [prot]==0
-                0.0,                     # constr. on area
-                0.0*ones(ncomp)...]      # constr. on angular coeff. of kon being negative
+                #maxamp*ones(ncomp)...,  # constr. on amp at [prot]==0
+                constrarea,              # constr. on area
+                zeros(ncomp)...]      # constr. on angular coeff. of kon being negative
         
         cst = zeros(Real,length(lnlc))
 
@@ -668,11 +670,15 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     ## 2d -> 1D
     mstartvec = vec(mstart)
     ncomp = size(mstart,2)
-    
+    vlowconstr = vec(lowconstr)
+    vupconstr = vec(upconstr)
+
     ##===================================================
     ## Some checks
     @assert issymmetric(invCd)
     @assert isposdef(invCd)
+    @assert constrarea>=0.0
+
     mode,kon,amp = getmodparbeta(betpar,mstartvec,0.0)
     if mode<betpar.a
         betami = BetaMix2D(betpar,mstart,dobs.protein)
@@ -682,27 +688,42 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
 
     ##===================================================
     ## Objective function without constraints
-    df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) #fun_grad!, fun_hess!, mstartvec)
+    # df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) #fun_grad!, fun_hess!, mstartvec)
+    df = TwiceDifferentiable(closmisfitOPTIM,fun_grad!, fun_hess!, mstartvec)
+    
     
     ## Add constraints
     if applynonlinconstr
         # check if starting model fulfills nonlinear constraints
         fullfillconstr = checknonlinconstr(betpar,cst,lnlc,unlc,mstartvec,dobs.protein)
-        @show fullfillconstr
+        #@show fullfillconstr
         # if !fullfillconstr
-        #     error("solveinvprob(): NONlinear constraints not fuldilled by starting model")
+        #     error("solveinvprob(): NONlinear constraints not fulfilled by starting model")
         # end
         # linear and NONlinear constraints
         dfc = TwiceDifferentiableConstraints(con_c!, con_jacob!, con_hess!,
-                                             lowconstr, upconstr, lnlc, unlc)
+                                             vlowconstr, vupconstr, lnlc, unlc)
     else
         # linear constraints only
-        dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
+        dfc = TwiceDifferentiableConstraints(vlowconstr, vupconstr)
     end
 
     ## Run the Newton inversion with box minimization
-    println("\nRunning optimization with IPNewton...")
-    result = optimize(df, dfc, mstartvec, IPNewton(), Optim.Options(store_trace=true))
+    println("\nRunning optimization with IPNewton...\n")
+    # FAILURE using:  Optim.Options(store_trace=true,extended_trace=true) ????
+    #result = optimize(df, dfc, mstartvec, IPNewton() ) #, Optim.Options(store_trace=true,extended_trace=true))
+    result = optimize(df, dfc, mstartvec, IPNewton() ) #, Optim.Options() )
+
+    rcon=Optim.converged(result)
+    if rcon==false
+        println("\n############################################")
+        println(  "### FAILURE, convergence not attained!   ###")
+        println(  "### Try with different input parameters. ###")
+        println(  "############################################\n")
+    end
+
+
+    ##=========================================
     mpostvec = Optim.minimizer(result)
     ## https://julianlsolvers.github.io/Optim.jl/stable/#user/minimization/
     
@@ -727,7 +748,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     ##-------------------------------------------------------
     # save in HDF5 format
     outfile1 = joinpath(outdir,dobs.protein*"_ITCresults.h5")
-    println("Saving results to $outfile\n")
+    println("Saving results in HDF5 to $outfile1\n")
 
     hf = h5open(outfile1,"w")
     hf["protein"] = dobs.protein
@@ -752,13 +773,144 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
     ##-------------------------------------------------------
     # save in plain text format
     outfile2 = joinpath(outdir,dobs.protein*"_ITCresults.dat")
-    open(outfile2,"w") do io
-        writedlm(io, [x y])
-    end
+    println("Saving results in text file to $outfile2\n")
+    header = "# Output model parameters where each column represents a single Beta component "
 
+    ofl = open(outfile2,"w")
+    writedlm(ofl,[header])
+    writedlm(ofl,mpost)
+    close(ofl)
 
     return betmix
 end
 
 ########################################################################
 ########################################################################
+
+# function OLDsolveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,
+#                       invCd::Matrix{<:Real},mstart::Matrix{<:Real},
+#                       lowconstr::Vector{<:Real},upconstr::Vector{<:Real},
+#                       outdir::String)  
+
+#     # References
+
+#     # The algorithm was originally written by Tim Holy (@timholy, tim.holy@gmail.com).
+#     # J Nocedal, SJ Wright (2006), Numerical optimization, second edition. Springer.
+#     # A Wächter, LT Biegler (2006), On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming. Mathematical Programming 106 (1), 25-57.
+
+#     ### https://github.com/JuliaNLSolvers/NLSolversBase.jl/blob/0f07421dbef63e8f53ca658e6be2981c09ca9c5b/src/objective_types/constraints.jl 
+#     ### Constraints
+#     #
+#     # Constraints are specified by the user as
+#     #    lx_i ≤   x[i]  ≤ ux_i  # variable (box) constraints
+#     #    lc_i ≤ c(x)[i] ≤ uc_i  # linear/nonlinear constraints
+#     # and become equality constraints with l_i = u_i. ±∞ are allowed for l
+#     # and u, in which case the relevant side(s) are unbounded.
+#     #
+#     # The user supplies functions to calculate c(x) and its derivatives.
+#     #
+#     # Of course we could unify the box-constraints into the
+#     # linear/nonlinear constraints, but that would force the user to
+#     # provide the variable-derivatives manually, which would be silly.
+
+#     # struct TwiceDifferentiableConstraints{F,J,H,T} <: Constraints
+#     #     c!::F # c!(storage, x) stores the value of the constraint-functions at x
+#     #     jacobian!::J # jacobian!(storage, x) stores the Jacobian of the constraint-functions
+#     #     h!::H   # h!(storage, x) stores the hessian of the constraint functions
+#     #     bounds::ConstraintBounds{T}
+#     # end
+    
+#     ## Newton from Optim.jl
+#     #------------------------------------------------
+    
+#     function closmisfitOPTIM(clmcur::Vector{<:Real})
+#         clmcur2d=reshape(clmcur,betpar.nummodpar,ncomp)
+#         msf = misfitbeta2D(betpar,dobs,invCd,clmcur2d) #invCm,mprior,mcur)
+#         return msf
+#     end
+
+#     #------------------------------------------------
+
+#     function fun_grad!(gr,mcur) 
+#         ## gradient of the misfit function
+#         gr .= ForwardDiff.gradient(closmisfitOPTIM,mcur)
+#         return nothing
+#     end
+
+#     #------------------------------------------------
+    
+#     function fun_hess!(hess,mcur) 
+#         ## Hessian of the misfit function
+#         hess .= ForwardDiff.hessian(closmisfitOPTIM,mcur)
+#         return nothing
+#     end
+ 
+#     ##===================================================
+#     ## Some checks
+#     @assert issymmetric(invCd)
+#     @assert isposdef(invCd)
+
+    
+#     ##===================================================
+#     ## https://julianlsolvers.github.io/Optim.jl/stable/#examples/generated/ipnewton_basics/
+    
+#     ## 2d -> 1D
+#     mstartvec = vec(mstart)
+#     ncomp = size(mstart,2)
+    
+#     ## Objective function without constraints
+#     df = TwiceDifferentiable(closmisfitOPTIM, fun_grad!, fun_hess!, mstartvec)
+
+#     ## Add constraints
+#     dfc = TwiceDifferentiableConstraints(lowconstr, upconstr)
+
+#     ## Run the Newton inversion with box minimization
+#     println("\nRunning optimization with IPNewton...")
+#     result = optimize(df, dfc, mstartvec, IPNewton(), Optim.Options(store_trace=true))
+#     mpostvec = Optim.minimizer(result)
+
+#     ## reshape mpost
+#     mpost = reshape(mpostvec,size(mstart))
+
+#     ## structure holding Beta parameters and the solution in terms of
+#     ##   mode, confidence parameter and amplitude
+#     betmix = BetaMix2D(betpar,mpost,dobs.protein)
+
+#     ## show some info
+#     println(result)
+
+#     ##================================
+#     ## save data
+#     try
+#         mkdir(outdir)
+#     catch
+#         nothing
+#     end
+
+#     outfile = joinpath(outdir,dobs.protein*"_ITCresults.h5")
+#     println("Saving results to $outfile\n")
+
+#     hf = h5open(outfile,"w")
+#     hf["protein"] = dobs.protein
+#     hf["mpost"] = mpost
+#     hf["enthalpy"] = dobs.enthalpy
+#     hf["sdscon"] = dobs.sdsprotcon[:,1] # sdscon
+#     hf["procon"] = dobs.sdsprotcon[:,2] # procon
+#     hf["beta_a"] = betpar.a
+#     hf["beta_b"] = betpar.b
+#     hf["beta_ymin"] = betpar.ymax
+#     hf["beta_ymax"] = betpar.ymin
+#     hf["nummodpar"] = betpar.nummodpar
+#     hf["mstart"] = mstart
+#     hf["lowconstr"] = lowconstr
+#     hf["upconstr"] = upconstr
+#     hf["invCd"] = invCd
+#     hf["modefuncy"] = betpar.modefuny
+#     hf["konfuncy"]  = betpar.konfuny
+#     hf["ampfuncy"] = betpar.ampfuny
+#     close(hf)
+
+#     return betmix
+# end
+
+# ####################################################################

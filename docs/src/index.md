@@ -24,7 +24,7 @@ To install the package simple enter into the package manager mode in Julia by ty
 ```
 The package will be automatically downloaded from the web and installed.
 
-!!! note
+!!! warning
 
     At the moment the package is not yet registered in the official Julia registry, so, 
     to install it run the following in package mode:
@@ -52,13 +52,13 @@ If using the [`readallexperiments`](@ref) function, the directory containing the
 75uMIM7highSDS_3.DAT
 ```
 where the file names must follow the following rules:
-- they must end with ".DAT"
+- they must end with ".DAT" or ".dat"
 - they must contain the name of protein (e.g., "IM7") in the file name
 - the file format must be the same than the provided example (a commonly used instrument).
 
 Two optional parameters can be passed to [`readallexperiments`](@ref), namely `scalfactor` (defaulting to 0.004184 to convert Cal/mol to kJ/mol) which scales the enthalpy values, and `discninitrows` (defaulting to 0) which skips a certain  number of initial rows from the data set because usually initial data are affected by strong instrument noise which could bias the subsequent fitting process.  See [`readallexperiments`](@ref) to adapt it to a different case.
 
-Next step is to extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
+Next step is to extract the concentration of SDS and protein, the measured enthalpy and the indices for each experiments (`idxdata`) in the global data set. We obtain a dictionary, `data` in this case, containing all necessary information. 
 ```@example procITC
 using PyPlot # hide
 PyPlot.ioff() # hide
@@ -66,8 +66,11 @@ using ANISPROU
 
 inpdir="../../examples/inputdata/" # directory containing input data
 protein = "IM7" # protein name
-data = readallexperiments(inpdir,[protein])
-
+data = readallexperiments(inpdir,[protein]) 
+nothing # hide
+```
+Then instantiate the `ITCObsData` structure containing the measured (observed) enthalpy values along with other information. See [`ITCObsData`](@ref).
+```@example procITC
 sdscon = data[protein]["sdscon"]
 procon = data[protein]["procon"]
 enthalpy = data[protein]["enout"] 
@@ -82,7 +85,7 @@ plotobsdata(dobs)
 savefig("plotobsdata.svg") # hide
 nothing # hide
 ```
-![](plotinitguess.svg)
+![](plotobsdata.svg)
 Another way of visualising the observed data is plotting each single experiment in 1D using [`plotsingleexperiments`](@ref):
 ```@example procITC
 outdir="figs"
@@ -101,7 +104,8 @@ a = 0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
 b = 1.05*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
 minprotcon = minimum(dobs.sdsprotcon[:,2]) 
-maxprotcon = maximum(dobs.sdsprotcon[:,2]) 
+# setting the maximum SDS concentration higher than the maximum experimental value!
+maxprotcon = 1.05*maximum(dobs.sdsprotcon[:,2]) 
 
 ## define the parameters of Beta 2D functions
 modefuny = "linear"
@@ -128,10 +132,10 @@ In the following we create a starting model use 4 Beta components. To add more (
 ```@example procITC
 # Elements are: 2 for mode, 2 for the confidence parameter and
 #   2 for the amplitude parameter
-comp1 = [0.6,  1.5,  30.0, 30.0, -2.5,  -5.0 ]
-comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ]
-comp3 = [4.0,  9.0,  40.0, 80.0, 0.12, 0.16 ]
-comp4 = [5.0,  12.0, 20.0, 50.0, -1.6, -2.0 ]
+comp1 = [0.6,  1.5,  35.0, 30.0, -2.5,  -5.0 ]
+comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
+comp3 = [4.5,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
+comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ]
 
 # mstart is a 2D array where each column represents one component
 mstart = [comp1 comp2 comp3 comp4]
@@ -151,18 +155,32 @@ nothing # hide
 
 The solution of the inverse problem, that is, finding the set of model parameters which produces a "best" fit to the observed data is based on a constrained Newton method. The Newton method requires the computation of both the gradient of the misfit function with respect to model parameters and the Hessian matrix. Both gradient and Hessian matrix are calculated using automatic differentiation, specifically using the "forward mode" approach provided by the [`ForwardDiff.jl`](https://github.com/JuliaDiff/ForwardDiff.jl) package.
 
-First, we need to set the constraints for the Newton optimization. That is done by specifying the lower and upper bounds for each parameter and and passing it to the function [`setconstraints`](@ref), as shown in the following:
+First, we need to set the constraints for the Newton optimization. That can be done by specifying the lower and upper bounds for each parameter of each single component as following:
 ```@example procITC
-lowc = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0] # lower constraints [confidence must be >2.0]
-upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0] # upper constraints
-lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
+# lower constraints [confidence must be >2.0]
+lcs1 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0] 
+lcs2 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0] 
+lcs3 = [betpar.a, betpar.a, 2.1, 2.1,   0.0,   0.0] 
+lcs4 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0] 
+lowconstr = [lcs1 lcs2 lcs3 lcs4]
+
+# upper constraints
+ucs1 = [betpar.b, betpar.b, 500.0, 500.0,  0.0,  0.0] 
+ucs2 = [betpar.b, betpar.b, 500.0, 500.0,  0.0,  0.0] 
+ucs3 = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0] 
+ucs4 = [betpar.b, betpar.b, 500.0, 500.0,  0.0,  0.0] 
+upconstr = [ucs1 ucs2 ucs3 ucs4] 
+
 nothing # hide
 ```
-In order to solve the inverse problem we need a covariance matrix (symmetric positive-definite) representing the uncertainty on the observed data. What is actually required by the software is the inverse of such covariance matrix `invCd`, i.e., if ``\mathbf{C}_D`` is the covariance matrix on the observations, representing the noise on the data, we need to input the code ``\mathbf{C}^{-1}_D``, sometimes called the precision matrix.
+
+In order to solve the inverse problem we need a covariance matrix (symmetric positive-definite) representing the uncertainty on the observed data. What is actually required by the software is the inverse of such covariance matrix `invCd`, i.e., if ``\mathbf{C}_D`` is the covariance matrix on the observations, representing the noise on the data, we need to input the code ``\mathbf{C}^{-1}_D``, sometimes called the precision matrix. Fine tuning the covariance/precision matrix for specific observed data known to be highly uncertain (or simply wrong) may *significantly help* the inversion process. 
 ```@example procITC
 using LinearAlgebra
 nobs = length(dobs.enthalpy)
 stdobs = 0.2 .* ones(nobs) # standard deviation of the error on measured data
+stdobs[1:2] .= 0.8 # specify higher uncertainty for first two points
+stdobs[end-5:end] .= 0.5
 invCd = inv(diagm(stdobs.^2)) # in this case a diagonal precision matrix
 nothing # hide
 ```
@@ -173,13 +191,17 @@ outdir = "output"
 betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir)
 nothing # hide
 ```
-The output `betamix` is a structure of type [`BetaMix2D`](@ref) which holds the optimized parameters and other additional information. The function [`solveinvprob`](@ref) accepts an **additional optional parameter** `applynonlinconstr` which, when set to `true` adds a set of nonlinear constraints to the Newton optimization. These constraints are a zero (or minimum) area for each Beta component at protein concentration equal to zero and some other constraints on the modes and confidence parameters.
+The output `betamix` is a structure of type [`BetaMix2D`](@ref) which holds the optimized parameters and other additional information. The results are saved in the directory defined by the variable `output` both in the HDF5 format, including all parameters of the inversion and as a simple set of text files (.dat).
 
-!!! danger "Needs expansion"
 
-    **Expand this section: nonlinear constraints**
-	
+#### Additional nonlinear constraints
+The function [`solveinvprob`](@ref) accepts an **additional optional parameter** `applynonlinconstr` which, when set to `true` adds a set of nonlinear constraints to the Newton optimization. These constraints are a zero (or minimum) area for each Beta component at protein concentration equal to zero and some other constraints on the modes and confidence parameters requiring the solution to have modes within bound at protein concentration equal to zero and an increasing confidence parameter for decreasing protein concentration. The optional positive parameter `constrarea` defines (when `applynonlinconstr=true`) a constraint for the area of sum of the mix of Beta function at protein concentration equal to zero.
+```@example procITC
+betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,outdir,applynonlinconstr=true,constrarea=6.0)
+nothing # hide
+```
 
+### Plotting results
 Finally, it is possible to visualize the results as following:
 ```@example procITC
 outdir = "figs"
@@ -198,8 +220,24 @@ savefig(outdir*"/IM7_experiment1.svg") # hide
 nothing # hide
 ```
 ![](figs/IM7_experiment1.svg)
+Another plot is that of parameter values versus protein concentration, where the black lines represent the bounds derived from the experimental data:
+```@example procITC
+plotparamlines(betamix)
+outdir="figs" # hide
+savefig(outdir*"/IM7_paramlines.svg") # hide
+nothing # hide
+```
+![](figs/IM7_paramlines.svg)
+It's also possible to plot Beta function components and their sum for fixed protein concentration, e.g.:
+```@example procITC
+plotbetacomp1D(betamix,0.148)
+savefig("plotsingcomp.svg") # hide
+nothing # hide
+```	
+![](plotsingcomp.svg)
 
-### Plot the 3D surface vs. observed data
+
+#### Plot the 3D surface vs. observed data
 
 In case the package `Makie` is installed, it is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
 ```@example procITC
@@ -252,7 +290,16 @@ push!(locminmax, [ statpts[2][3] protcon[2];
                    statpts[3][3] protcon[3];
                    statpts[4][3] protcon[4] ] )
 
-push!(locminmax, [ statpts[1][4] protcon[1];
+push!(locminmax, [ statpts[2][4] protcon[2];
+                   statpts[3][4] protcon[3];
+                   statpts[4][4] protcon[4] ] )
+
+push!(locminmax, [ statpts[1][5] protcon[1];
+                   statpts[2][5] protcon[2];
+                   statpts[3][5] protcon[3];
+                   statpts[4][5] protcon[4] ] )
+					   
+push!(locminmax, [ statpts[1][6] protcon[1];
                    statpts[2][6] protcon[2];
                    statpts[3][6] protcon[3];
                    statpts[4][6] protcon[4] ] )
@@ -285,24 +332,24 @@ push!(inflectionpts, [ inflpts[1][5] protcon[1];
 push!(inflectionpts, [ inflpts[1][6] protcon[1];
                        inflpts[2][6] protcon[2];
                        inflpts[3][6] protcon[3];
-                       inflpts[4][8] protcon[4] ] )
+                       inflpts[4][6] protcon[4] ] )
 
 push!(inflectionpts, [ inflpts[1][7] protcon[1];
                        inflpts[2][7] protcon[2];
                        inflpts[3][7] protcon[3];
-                       inflpts[4][9] protcon[4] ] )
+                       inflpts[4][7] protcon[4] ] )
 
 nothing # hide
 ```
 
-Once we have a set of set of features we can estimate the best fitting straight lines for each set by performing a least squares linear regression. 
+Once we have a set of set of features we can estimate the best fitting straight lines for each set by performing a least squares linear regression with [`calcfreeSDSNbound`](@ref). 
 ```@example procITC
 # find the straight line by least squares
 lstlines = [locminmax..., inflectionpts...] # list of set of points
 freeSDS,Nbound = calcfreeSDSNbound(lstlines) # do the linear regression
 nothing # hide
 ```
-Finally, the resulting binding isotherm is plotted by the following:
+Finally, the resulting binding isotherm is plotted with the following:
 ```@example procITC 
 outdir = "figs"
 plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir)
@@ -314,14 +361,14 @@ nothing # hide
 
 ## Calculating areas and volumes
 
-Compute the area for each Beta component at requested protein concentration:
+Compute the area for each Beta component at requested protein concentration using [`area_enthalpy`](@ref):
 ```@example procITC
 protcon = 0.08 # requested protein concentration
 area,errarea = area_enthalpy(betamix,protcon) # compute area
 println("Area at protein concentration $protcon for each component: \n$area, \nintegration error\n $errarea\n")
 nothing # hide
 ```
-It is also possible to calculate the area for each Beta component for a set of different protein concentrations:
+It is also possible to calculate the area for each Beta component for a set of different protein concentrations and plot it using [`areasvsprotcon`](@ref) and [`plotareavsprotcon`](@ref):
 ```@example procITC
 N = 15
 protcons = collect(LinRange(0.0,0.14,N)) # set of protein concentrations
@@ -331,8 +378,15 @@ savefig("plotsetareas.svg") # hide
 nothing # hide
 ```	
 ![](plotsetareas.svg)
-	
-Compute the volume for all Beta components within requested bounds of protein concentration:
+Alternatively, a function to plot the value of model parameters and areas as a function of protein concentration is available, [`plotparamlines`](@ref)
+```@example procITC
+plotparamlines(betamix,protcons,areas)
+savefig("plotareasparlines.svg") # hide
+nothing # hide
+```	
+![](plotareasparlines.svg)
+
+Compute the volume for all Beta components within requested bounds of protein concentration using [`volume_enthalpy`](@ref):
 ```@example procITC
 minprotcon = betamix.betpar.ymin  # lower bound for integral
 maxprotcon = betamix.betpar.ymax  # upper bound for integral
@@ -351,7 +405,6 @@ readallexperiments
 ITCObsData
 ScaledBeta2DParams
 BetaMix2D
-setconstraints
 solveinvprob
 findcurvefeatures
 calcfreeSDSNbound
@@ -374,7 +427,7 @@ plotbetacomp1D
 plotparamlines
 ```
 
-# Other non exported functions
+# Other non-exported functions
 ```@docs
 ANISPROU.lssqregr
 ANISPROU.plotmodelines

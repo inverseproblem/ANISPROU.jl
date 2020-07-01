@@ -8,6 +8,7 @@ using LinearAlgebra
 
 function launchall()
 
+    ##===========================================================
     ## do the fitting of data with Beta functions
     inpdir="inputdata/"
     protein = "IM7"
@@ -16,13 +17,11 @@ function launchall()
     # ## plot straight lines defined by parameters as a function of concentration
     # plotparamlines(betamix)
 
-    ### plot single components for fixed protein concentration
-    # plotbetacomp1D(betamix,maximum(dobs.sdsprotcon[:,2]))
+    # ## plot single components for fixed protein concentration
     # plotbetacomp1D(betamix,0.148)
-    # plotbetacomp1D(betamix,0.14)
-
+   
     # plot 3D surface from results
-    if  isdefined(@__MODULE__,:Makie)
+    if isdefined(@__MODULE__,:Makie)
         plotsurface3D(dobs,betamix,yscal=70,ymin=0.0)
     end
 
@@ -30,10 +29,8 @@ function launchall()
     outdir="figs"
     plotsingleexperiments(outdir,dobs,betamix)
 
-    # ## construct binding isotherm for Beta mix using stationary and inflection points
-    # freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
 
-       
+    ##===========================================================
     ## compute area for all Beta components at
     ##   requested protein concentration
     protcon = 0.08
@@ -59,8 +56,13 @@ function launchall()
     println("\nVolume within bounds for each component: $volume, error $errvol\n")
 
 
-    ### construct binding isotherm for each Beta function using selected amplitude points
-    ## sdsfNbou_singlebetas = bindingisotherm_singlebetas(dobs,betamix)
+    ##===========================================================
+    ## construct binding isotherm for Beta mix using stationary and inflection points
+    freeSDS,Nbound = bindingisotherm_betamix(betamix,dobs)
+
+
+    # ## construct binding isotherm for each Beta function using selected amplitude points
+    # # sdsfNbou_singlebetas = bindingisotherm_singlebetas(dobs,betamix)
 
     return betamix,dobs #,freeSDS,Nbound
 end
@@ -91,11 +93,11 @@ function invertITCdata(inpdir::String,protein::String)
 
     ##=========================
     ## forward test
-    a = 0.0 #0.99*minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
+    a = minimum(dobs.sdsprotcon[:,1]) # lower bound for beta domain
     b = 1.05*maximum(dobs.sdsprotcon[:,1]) # upper bound for beta domain
 
     minprotcon = minimum(dobs.sdsprotcon[:,2]) 
-    maxprotcon = maximum(dobs.sdsprotcon[:,2])
+    maxprotcon = 1.05*maximum(dobs.sdsprotcon[:,2]) # 1.1* 
     
     @show a,b,minprotcon,maxprotcon
 
@@ -123,21 +125,23 @@ function invertITCdata(inpdir::String,protein::String)
         ##  Just add (remove) rows to increase (decrease) the number of components
         ## Elements are: 2 for mode, 2 for the confidence parameter and
         ##   2 for the amplitude parameter
+   
         comp1 = [0.6,  1.5,  35.0, 30.0, -2.5,  -5.0 ]  
         comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
         comp3 = [4.5,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
-        comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ] 
+        comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ]
 
-        # comp1 = [1.6,  1.5,  35.0, 30.0, -1.5,  -5.0 ]  
-        # comp2 = [2.7,  4.8,  60.0, 40.0, -0.6,  -4.0 ] 
-        # comp3 = [6.0,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
-        # comp4 = [8.0,  15.3, 60.0, 40.0, -1.0, -2.0 ] 
-
+        # comp1 = [0.6,  1.3,  35.0, 30.0, -2.5,  -5.0 ]  
+        # comp2 = [1.7,  4.4,  60.0, 40.0, -1.6,  -4.0 ] 
+        # comp3 = [4.8,  9.6,  40.0, 30.0, 0.12, 0.16 ] 
+        # comp4 = [6.2,  14.8, 60.0, 40.0, -1.6, -2.0 ]
      end
 
     ## mstart is a 2D array where each column represents one component
     mstart = [comp1 comp2 comp3 comp4] 
     @show size(mstart)
+
+    ## plotparamlines(BetaMix2D(betpar,mstart,dobs.protein))
 
     ############################################
     if onlytestinitialguess==true
@@ -152,29 +156,48 @@ function invertITCdata(inpdir::String,protein::String)
     ## Set constraints
     ## Elements are: 2 for mode, 2 for the confidence parameter and
     ##   2 for the amplitude parameter
-    ## lower constraints 
-    lowc = [betpar.a,  betpar.a, 10.1, 10.1, -20.0, -20.0]
-    ## upper constraints
-    upc  = [betpar.b, betpar.b, 5000.0, 5000.0, 10.0, 10.0]
+    # ## lower constraints 
+    # lowc = [betpar.a,  betpar.a, 2.1, 2.1, -20.0, -20.0]
+    # ## upper constraints
+    # upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
+    # lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 
-    lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
+    # lower constraints [confidence must be >2.0]
+    lcs1 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+    lcs2 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+    lcs3 = [betpar.a, betpar.a, 2.1, 2.1,   0.0,   0.0]
+    lcs4 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+    lowconstr = [lcs1 lcs2 lcs3 lcs4]
 
+    # upper constraints
+    ucs1 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+    ucs2 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+    ucs3 = [betpar.b, betpar.b, 1000.0, 1000.0, 10.0, 10.0]
+    ucs4 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+    upconstr = [ucs1 ucs2 ucs3 ucs4]
+
+    ## check mstart...
+    @show mstart.<=lowconstr
+    @show mstart.>=upconstr
+    @assert all(mstart.>=lowconstr)
+    @assert all(mstart.<=upconstr)
+
+    
     ###############################################
     ## run the Newton optimization
     nobs = length(dobs.enthalpy)
-    stdobs = 0.1 .* ones(nobs)   #2.0 .* ones(nobs)
-    stdobs[1:2] .= 0.5
-    #stdobs[end-5:end] .= 0.5
+    stdobs = 0.2 .* ones(nobs)   #2.0 .* ones(nobs)
+    stdobs[1:2] .= 0.8
+    stdobs[end-5:end] .= 0.5
     @show stdobs
     Cd = diagm(stdobs.^2)
     invCd = inv(Cd)
 
     ## IPNewton from Optim.jl, box constraints
-    lagmularea = nothing
     outdir = "output"
     betamix = solveinvprob(betpar,dobs,invCd,mstart,lowconstr,upconstr,
-                           outdir,applynonlinconstr=true)
-    
+                           outdir,applynonlinconstr=true,constrarea=6.0) ## 2.0
+
     ##================================
     ## plot results
     outdir = "figs"
@@ -190,7 +213,7 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     ##===========================================
     ## Find stationary and inflection points
     ny = 4 
-    protcon = collect(LinRange(betamix.betpar.ymin,betamix.betpar.ymax,ny))
+    protcon = collect(LinRange(1.1*betamix.betpar.ymin,0.8*betamix.betpar.ymax,ny))
     statpts,inflpts = findcurvefeatures(betamix,protcon)
 
     # plot found points/features
@@ -206,20 +229,19 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
                        statpts[3][2] protcon[3];
                        statpts[4][2] protcon[4] ] )
     
-    push!(locminmax, [ statpts[2][3] protcon[2];
-                       statpts[3][3] protcon[3];
+    push!(locminmax, [ statpts[3][3] protcon[3];
                        statpts[4][3] protcon[4] ] )
 
-    # push!(locminmax, [ statpts[2][4] protcon[2];
-    #                    statpts[3][4] protcon[3];
-    #                    statpts[4][4] protcon[4] ] )
+    push!(locminmax, [ statpts[2][4] protcon[2];
+                       statpts[3][4] protcon[3];
+                       statpts[4][4] protcon[4] ] )
 
-    # push!(locminmax, [ statpts[1][3] protcon[1];
-    #                    statpts[2][5] protcon[2];
-    #                    statpts[3][5] protcon[3];
-    #                    statpts[4][5] protcon[4] ] )
+    push!(locminmax, [ statpts[1][5] protcon[1];
+                       statpts[2][5] protcon[2];
+                       statpts[3][5] protcon[3];
+                       statpts[4][5] protcon[4] ] )
 
-    push!(locminmax, [ statpts[1][4] protcon[1];
+    push!(locminmax, [ statpts[1][6] protcon[1];
                        statpts[2][6] protcon[2];
                        statpts[3][6] protcon[3];
                        statpts[4][6] protcon[4] ] )
@@ -252,12 +274,12 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     push!(inflectionpts, [ inflpts[1][6] protcon[1];
                            inflpts[2][6] protcon[2];
                            inflpts[3][6] protcon[3];
-                           inflpts[4][8] protcon[4] ] )
+                           inflpts[4][6] protcon[4] ] )
 
     push!(inflectionpts, [ inflpts[1][7] protcon[1];
                            inflpts[2][7] protcon[2];
                            inflpts[3][7] protcon[3];
-                           inflpts[4][9] protcon[4] ] )
+                           inflpts[4][7] protcon[4] ] )
 
 
     ##===========================================

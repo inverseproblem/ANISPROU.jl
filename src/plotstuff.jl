@@ -216,7 +216,7 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
     Npoints = 100
     ncomp = size(mcur,2)
     xm = LinRange(0.0,betpar.ymax,Npoints)
-    parname = ["mode","confidence par.","amplitude"]
+    parname = ["Mode","Confidence par.","Amplitude"]
 
 
     figure(figsize=(12,9))
@@ -224,7 +224,7 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
 
         subplot(2,2,ip)
         title("$(parname[ip])")
-        xlabel("Protein concentration")
+        xlabel("Protein concentration [mM]")
         axvline(betpar.ymin,color="black")
         axvline(betpar.ymax,color="black")
 
@@ -579,7 +579,7 @@ function plotbetacomp1D(betamix,protcon) #; expernumber=nothing)
     end
 
     enth = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
-    plot(x,enth,"-k",linewidth=2,label="sum of Beta func.")
+    plot(x,enth,"-",linewidth=2,color="red",label="sum of Beta func.")
 
     legend()
     xlabel("SDS concentration [mM]")
