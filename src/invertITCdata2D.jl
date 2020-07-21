@@ -44,13 +44,20 @@ struct ScaledBeta2DParams
         elseif modefuny=="quadratic"
             nummodpar+=3
             idxmode=1
+        else
+            error("ScaledBeta2DParams: wrong `modefuny`")
         end
-        if konfuny=="linear"
+        if konfuny=="constant"
+            idxkon=nummodpar+1
+            nummodpar+=1
+        elseif konfuny=="linear"
             idxkon=nummodpar+1
             nummodpar+=2
         elseif konfuny=="quadratic"
             idxkon=nummodpar+1
             nummodpar+=3
+        else
+            error("ScaledBeta2DParams: wrong `konfuny`")
         end
         if ampfuny=="linear"
             idxamp=nummodpar+1
@@ -58,6 +65,8 @@ struct ScaledBeta2DParams
         elseif ampfuny=="quadratic"
             idxamp=nummodpar+1
             nummodpar+=3
+        else
+            error("ScaledBeta2DParams: wrong `ampfuny`")
         end
         return new(nummodpar,modefuny,konfuny,ampfuny,a,b,ymin,ymax,idxmode,idxkon,idxamp)
     end
@@ -338,9 +347,11 @@ function getmodparbeta(betpar::ScaledBeta2DParams,mcur::Vector{<:Real},ycur::Rea
     end
     
     ## confidence parameter
-    if betpar.konfuny=="linear"
+    if betpar.konfuny=="constant"
+        kon = mcur[betpar.idxkon]
+    elseif betpar.konfuny=="linear"
         kon1,kon2 = mcur[betpar.idxkon:betpar.idxkon+1]
-        kon  = ((kon2-kon1)/(x2-x1))*(ycur-x1) + kon1
+        kon = ((kon2-kon1)/(x2-x1))*(ycur-x1) + kon1
     elseif betpar.konfuny=="quadratic"
         error("Quadratic representation of confidence parameter along y not yet implemented.")
     end
@@ -462,6 +473,8 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     #     bounds::ConstraintBounds{T}
     # end
     
+    @assert  size(mstart,1)==betpar.nummodpar
+
     ## Newton from Optim.jl
     #------------------------------------------------
     
@@ -574,11 +587,13 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             push!(cstfun,acfun)
             ifun+=1
 
-            # angular coefficient for kon parameter being negative (shrinking functions)
-            for ic=1:ncomp
-                acfun = ccmcur->angcoekonconstraint(betpar,ic,ccmcur)
-                push!(cstfun,acfun)
-                ifun+=1
+            # angular coefficient for kon parameter being negative (shrinking functions), only if konfuny=="linear"
+            if betpar.konfuny=="linear"
+                for ic=1:ncomp
+                    acfun = ccmcur->angcoekonconstraint(betpar,ic,ccmcur)
+                    push!(cstfun,acfun)
+                    ifun+=1
+                end
             end
 
             return cstfun
@@ -600,25 +615,31 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         ##===================================
         ## Set NONlinear constratints        
         ncomp = size(mstart,2)
-        maxamp = 1.0
+        #maxamp = 1.0
 
         lnlc = [zeros(ncomp)...,      # constr. on mode at [prot]==0
                 2.5*ones(ncomp)...,   # constr. on kon at [prot]==0
                 #-maxamp*ones(ncomp)..., # constr. on amp at [prot]==0
-                0.0,          # constr. on area
-                -Inf*ones(ncomp)...]  # constr. on angular coeff. of kon being negative
+                0.0 ]          # constr. on area
 
         unlc = [betpar.b*ones(ncomp)..., # constr. on mode at [prot]==0
                 Inf*ones(ncomp)...,      # constr. on kon at [prot]==0
                 #maxamp*ones(ncomp)...,  # constr. on amp at [prot]==0
-                constrarea,              # constr. on area
-                zeros(ncomp)...]      # constr. on angular coeff. of kon being negative
-        
+                constrarea ]              # constr. on area
+
+
+        if betpar.konfuny=="linear"
+            # constr. on angular coeff. of kon being negative
+            lnlc = append!(lnlc,-Inf*ones(ncomp)...)
+            # constr. on angular coeff. of kon being negative
+            unlc = append!(unlc,zeros(ncomp)...)
+        end
+
+        ## init constraints
         cst = zeros(Real,length(lnlc))
 
         function closcon_c(mcur::Vector{<:Real})
             con_c!(cst,mcur)
-            #@show size(cst)
             return cst
         end
 
@@ -651,7 +672,6 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         
         function con_hess!(hess,mcur, λ)
             ## IPNewton needs one Hessian per constraint
-            #@show size(hess),size(mcur),size(λ)
             # one Hessian for each single constraint
             N=length(λ)
             for i=1:N

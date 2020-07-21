@@ -210,7 +210,12 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
     mcur = betamix.modkonamp
     
     @assert betpar.modefuny=="linear"
-    @assert betpar.konfuny=="linear"
+    #@assert betpar.konfuny=="linear"
+    if betpar.konfuny=="constant"
+        
+    elseif betpar.konfuny=="linear"
+
+    end
     @assert betpar.ampfuny=="linear"
 
     Npoints = 100
@@ -234,12 +239,38 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
         end
 
         for i=1:ncomp
-            firstidpar = (ip-1)*2+1
-            x1 = betpar.ymin
-            x2 = betpar.ymax
-            i2 = firstidpar+1
-            i1 = firstidpar
-            ym = (mcur[i2,i].-mcur[i1,i])./(x2.-x1).*(xm.-x1) .+ mcur[i1,i] 
+            if ip==1
+                firstidpar = betpar.idxmode
+                i2 = firstidpar+1
+                i1 = firstidpar
+                x1 = betpar.ymin
+                x2 = betpar.ymax
+                ym = (mcur[i2,i].-mcur[i1,i])./(x2.-x1).*(xm.-x1) .+ mcur[i1,i] 
+                
+            elseif ip==2
+                if betpar.konfuny=="constant"
+                    firstidpar = betpar.idxkon
+                    ym = mcur[firstidpar,i].*ones(length(xm))
+
+                elseif betpar.konfuny=="linear"
+                    firstidpar = betpar.idxkon
+                    i2 = firstidpar+1
+                    i1 = firstidpar
+                    x1 = betpar.ymin
+                    x2 = betpar.ymax
+                    ym = (mcur[i2,i].-mcur[i1,i])./(x2.-x1).*(xm.-x1) .+ mcur[i1,i] 
+
+                end
+                    
+            elseif ip==3
+                firstidpar = betpar.idxamp
+                i2 = firstidpar+1
+                i1 = firstidpar
+                x1 = betpar.ymin
+                x2 = betpar.ymax
+                ym = (mcur[i2,i].-mcur[i1,i])./(x2.-x1).*(xm.-x1) .+ mcur[i1,i] 
+
+            end
 
             plot(xm,ym,"-",linewidth=1,label="comp. $i")
             plot(xm[[1,end]],ym[[1,end]],".k",markersize=5.0)

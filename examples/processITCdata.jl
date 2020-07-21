@@ -103,7 +103,7 @@ function invertITCdata(inpdir::String,protein::String)
 
     ## define the parameters of Beta 2D functions
     modefuny = "linear"
-    konfuny  = "linear"
+    konfuny  = "linear" #"constant"
     ampfuny  = "linear"
     betpar = ScaledBeta2DParams(modefuny=modefuny,konfuny=konfuny,
                                 ampfuny=ampfuny,a=a,b=b,
@@ -126,15 +126,20 @@ function invertITCdata(inpdir::String,protein::String)
         ## Elements are: 2 for mode, 2 for the confidence parameter and
         ##   2 for the amplitude parameter
    
-        comp1 = [0.6,  1.5,  35.0, 30.0, -2.5,  -5.0 ]  
-        comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
-        comp3 = [4.5,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
-        comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ]
+        if betpar.konfuny=="constant"
+            # constant kon
+            comp1 = [0.6,  1.5,  30.0, -2.5,  -5.0 ]  
+            comp2 = [1.7,  4.8,  50.0, -1.6,  -4.0 ] 
+            comp3 = [4.5,  10.0, 35.0, 0.12, 0.16 ] 
+            comp4 = [6.2,  15.3, 50.0, -1.6, -2.0 ]
 
-        # comp1 = [0.6,  1.3,  35.0, 30.0, -2.5,  -5.0 ]  
-        # comp2 = [1.7,  4.4,  60.0, 40.0, -1.6,  -4.0 ] 
-        # comp3 = [4.8,  9.6,  40.0, 30.0, 0.12, 0.16 ] 
-        # comp4 = [6.2,  14.8, 60.0, 40.0, -1.6, -2.0 ]
+        else
+            comp1 = [0.6,  1.5,  35.0, 30.0, -2.5,  -5.0 ]  
+            comp2 = [1.7,  4.8,  60.0, 40.0, -1.6,  -4.0 ] 
+            comp3 = [4.5,  10.0, 40.0, 30.0, 0.12, 0.16 ] 
+            comp4 = [6.2,  15.3, 60.0, 40.0, -1.6, -2.0 ]
+        end
+
      end
 
     ## mstart is a 2D array where each column represents one component
@@ -162,19 +167,36 @@ function invertITCdata(inpdir::String,protein::String)
     # upc  = [betpar.b, betpar.b, 500.0, 500.0, 10.0, 10.0]
     # lowconstr,upconstr = setconstraints(betpar,mstart,lowc,upc)
 
-    # lower constraints [confidence must be >2.0]
-    lcs1 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
-    lcs2 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
-    lcs3 = [betpar.a, betpar.a, 2.1, 2.1,   0.0,   0.0]
-    lcs4 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
-    lowconstr = [lcs1 lcs2 lcs3 lcs4]
+    if betpar.konfuny=="constant"
+        ## constant kon
+        # lower constraints [confidence must be >2.0]
+        lcs1 = [betpar.a, betpar.a, 2.1, -20.0, -20.0]
+        lcs2 = [betpar.a, betpar.a, 2.1, -20.0, -20.0]
+        lcs3 = [betpar.a, betpar.a, 2.1,   0.0,   0.0]
+        lcs4 = [betpar.a, betpar.a, 2.1, -20.0, -20.0]
+        lowconstr = [lcs1 lcs2 lcs3 lcs4]
+        # upper constraints
+        ucs1 = [betpar.b, betpar.b, 1000.0,  0.0,  0.0]
+        ucs2 = [betpar.b, betpar.b, 1000.0,  0.0,  0.0]
+        ucs3 = [betpar.b, betpar.b, 1000.0, 10.0, 10.0]
+        ucs4 = [betpar.b, betpar.b, 1000.0,  0.0,  0.0]
+        upconstr = [ucs1 ucs2 ucs3 ucs4]
 
-    # upper constraints
-    ucs1 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
-    ucs2 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
-    ucs3 = [betpar.b, betpar.b, 1000.0, 1000.0, 10.0, 10.0]
-    ucs4 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
-    upconstr = [ucs1 ucs2 ucs3 ucs4]
+    else
+        # lower constraints [confidence must be >2.0]
+        lcs1 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+        lcs2 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+        lcs3 = [betpar.a, betpar.a, 2.1, 2.1,   0.0,   0.0]
+        lcs4 = [betpar.a, betpar.a, 2.1, 2.1, -20.0, -20.0]
+        lowconstr = [lcs1 lcs2 lcs3 lcs4]
+        # upper constraints
+        ucs1 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+        ucs2 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+        ucs3 = [betpar.b, betpar.b, 1000.0, 1000.0, 10.0, 10.0]
+        ucs4 = [betpar.b, betpar.b, 1000.0, 1000.0,  0.0,  0.0]
+        upconstr = [ucs1 ucs2 ucs3 ucs4]
+
+    end
 
     ## check mstart...
     @show mstart.<=lowconstr
