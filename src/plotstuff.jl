@@ -561,7 +561,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function plotareavsprotcon(protcons,areas,outdir)
+function plotareavsprotcon(protcons,areas,proteinname,outdir)
     ncomp = size(areas,2)
     figure()
     for i=1:ncomp
@@ -577,7 +577,7 @@ function plotareavsprotcon(protcons,areas,outdir)
     catch
         nothing
     end
-    savefig(joinpath(outdir,protein*"_areavsprotcon.pdf"))
+    savefig(joinpath(outdir,proteinname*"_areavsprotcon.pdf"))
     return
 end
 
