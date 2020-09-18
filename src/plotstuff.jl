@@ -100,7 +100,7 @@ function plotresults(betamix,dobs,mstart,outdir)
     colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
-    plotmodelines(betpar,mpost,"post. m.")
+    plotmodelines(betpar,mstart,"start. m.")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     #plotmodelines(betpar,mpost,"mpost")
@@ -175,27 +175,26 @@ Plot the lines defined by the modes (default) or, optionally, other
   parameters (see `firstidpar`).
 """
 function plotmodelines(betpar,mcur,modname; firstidpar=1)
-    Npoints = 40
+    #Npoints = 40
     ncomp = size(mcur,2)
-    ym = LinRange(betpar.ymin,betpar.ymax,Npoints)
+    ym = [betpar.ymin,betpar.ymax] #LinRange(betpar.ymin,betpar.ymax,Npoints)
+    y1 = betpar.ymin
+    y2 = betpar.ymax
     for i=1:ncomp
-        # s1 = (i-1)*betpar.nummodpar + 1 
-        # s2 = (i-1)*betpar.nummodpar + 2 
-        x1 = betpar.ymin
-        x2 = betpar.ymax
         i2 = firstidpar+1
         i1 = firstidpar
-        xm = (mcur[2,i].-mcur[1,i])./(x2.-x1).*(ym.-x1) .+ mcur[1,i] 
+        xm = (mcur[i2,i].-mcur[i1,i])./(y2.-y1).*(ym.-y1) .+ mcur[i1,i]
         if i==ncomp
-            plot(xm,ym,"-k",linewidth=0.7,label="mode $modname")
+            plot(xm,ym,"-k",linewidth=0.6,label="mode $modname")
         else
-            plot(xm,ym,"-k",linewidth=0.7)
+            plot(xm,ym,"-k",linewidth=0.6)
         end
         plot(xm[[1,end]],ym[[1,end]],"ok",markersize=2.0)
     end
     legend(loc="lower right")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
+    return
 end
 
 ############################################
@@ -562,11 +561,31 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function plotareavsprotcon(protcons,areas,proteinname,outdir)
+function plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir;
+                           firstidpar=1)
     ncomp = size(areas,2)
     figure()
+ 
+    println("### Protein $proteinname, area vs. protein conc. ###")
+    ##------------------------
+    # linear fits
+    ncomp = size(linfitres,1)
+    x1 = protcons[1]
+    x2 = protcons[end]
+    xm = [x1,x2]
     for i=1:ncomp
-        plot(protcons,areas[:,i],"o-",label="Beta comp. #$i")
+        acoe   = linfitres[i,1]
+        interc = linfitres[i,2]
+        println("Linear fit, Beta comp. #$i, ang.coef.=$acoe,\n                           intecept=$interc")
+        ym = acoe.*xm .+ interc
+        plot(xm,ym,"-k",linewidth=1.5)
+    end
+
+    ##------------------------------
+    # areas 
+    for i=1:ncomp
+        plot(protcons,areas[:,i],"o",
+             markersize=8,linewidth=2.5,label="Beta comp. #$i")
     end
     legend()
     xlabel("Protein concentration [mM]")

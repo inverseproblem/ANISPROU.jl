@@ -92,6 +92,7 @@ Calculate the area of each individual Beta function for a set of  protein concen
 function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::String,protein::String;
                         volumescal::Real=203.0)
                         
+    ##-------------------------------------------------------
     N=length(protcons)
     ncomp = size(betamix.modkonamp,2)
     areas = zeros(N,ncomp)
@@ -101,10 +102,21 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::Str
     end
 
     ##-------------------------------------------------------
+    ## linear fit to area curves
+    angcoe = Vector{Float64}(undef,ncomp)
+    intercept = Vector{Float64}(undef,ncomp)
+    for i=1:ncomp
+        angcoe[i],intercept[i] = lssqregr([protcons areas[:,i] ])
+    end
+    linfitres = [angcoe intercept]
+   
+
+    ##-------------------------------------------------------
     # save in JLD2 format
     outfile1 = joinpath(outdir,protein*"_ITCareasprotcon.jld2")
     println("Saving areas data in JLD2 to $outfile1\n")
     jldopen(outfile1, "w") do fl
+        fl["linearfit"] = linfitres
         fl["areas"] = areas
         fl["errar"] = errar
         fl["protconareas"] = protcons
@@ -122,7 +134,7 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::Str
     # writedlm(ofl,outdata)
     # close(ofl)
 
-    return areas,errar
+    return areas,errar,linfitres
 end
 
 ###########################################################

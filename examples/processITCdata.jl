@@ -41,10 +41,10 @@ function launchall()
     N = 15
     protcons = collect(LinRange(0.0,0.14,N))
     outdir = "output"
-    areas,erras = areasvsprotcon(betamix,protcons,outdir,protein)
+    areas,erras,linfitres = areasvsprotcon(betamix,protcons,outdir,protein)
 
     # ## plot areas only
-    # # plotareavsprotcon(protcons,areas)
+    # plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir)
     # ## plot parameters lines and areas
     # plotparamlines(betamix,protcons,areas)
 

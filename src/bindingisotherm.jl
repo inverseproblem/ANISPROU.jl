@@ -70,32 +70,6 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Least squares linear regression.
-"""
-function lssqregr(points)
-    
-    ## G = [protc ones(length(protc))]
-    ## dobs = sdsc
-    G = [points[:,1] ones(size(points,1))]
-    dobs = points[:,2]
-
-    ## overdetermined least squares
-    ## mpost = (G'*G)*G'*dobs
-    ## (G'*G) * h = G'
-    lstmp = (G'*G) \ G'
-    mpost = lstmp * dobs
-
-    angcoe = mpost[1]
-    intercept = mpost[2]
-
-    return angcoe,intercept
-end
-
-####################################################
-
-"""
-$(TYPEDSIGNATURES)
-
 Define a set of features on the Beta mix to subsequently compute the binding isotherm.
 It uses the stationary and inflection points at given protein concentrations (protcon). 
 """

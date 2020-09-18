@@ -43,6 +43,7 @@ export plotbindisotherm,plotfoundfeatures
 export plotareavsprotcon,plotbetacomp1D
 export plotparamlines
 
+include("utils.jl")
 include("readITCdata.jl")
 include("invertITCdata2D.jl")
 include("betaintegrals.jl")

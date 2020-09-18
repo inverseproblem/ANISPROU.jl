@@ -45,7 +45,7 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.
 
     ## Makie plot    
     scene = Makie.Scene(resolution = (1000, 1000))
-    Makie.surface!(scene,xv,yscal*yv,zscal*dcalc,alpha=1.0)
+    Makie.surface!(scene,xv,yscal*yv,zscal*dcalc,alpha=1.0,colormap=:rainbow1)
     
     # lim = FRect3D((xmin,ymin,zmin),(xmax,ymax,zmax))
     # Makie.surface!(scene,xv,yv,dcalc,limits=lim)
