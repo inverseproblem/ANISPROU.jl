@@ -89,7 +89,8 @@ Calculate the area of each individual Beta function for a set of  protein concen
 - `volumescal`: scaling factor in μl to convert from mM to mole, instrument dependent. The default 
                is 203.0μl.
 """
-function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal::Real=203.0)
+function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::String,protein::String;
+                        volumescal::Real=203.0)
                         
     N=length(protcons)
     ncomp = size(betamix.modkonamp,2)
@@ -98,6 +99,28 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64}; volumescal
     for i=1:N
         areas[i,:],errar[i,:] = area_enthalpy(betamix,protcons[i],volumescal=volumescal)
     end
+
+    ##-------------------------------------------------------
+    # save in JLD2 format
+    outfile1 = joinpath(outdir,protein*"_ITCareasprotcon.jld2")
+    println("Saving areas data in JLD2 to $outfile1\n")
+    jldopen(outfile1, "w") do fl
+        fl["areas"] = areas
+        fl["errar"] = errar
+        fl["protconareas"] = protcons
+        fl["volumescal"] = volumescal
+    end
+
+    # ##-------------------------------------------------------
+    # # save in plain text format
+    # outdata = [areas protcons]
+    # outfile2 = joinpath(outdir,protein*"_ITCareasprotcon.dat")
+    # println("Saving results in text file to $outfile2\n")
+    # header = "# Binding isotherm results for protein $protein, columns: freeSDS and Nbound"
+    # ofl = open(outfile2,"w")
+    # writedlm(ofl,[header])
+    # writedlm(ofl,outdata)
+    # close(ofl)
 
     return areas,errar
 end

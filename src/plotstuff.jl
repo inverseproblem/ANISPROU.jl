@@ -100,6 +100,7 @@ function plotresults(betamix,dobs,mstart,outdir)
     colorbar(label="Enthalpy [kJ/mol]")
     xlabel("SDS concentration [mM]")
     ylabel("Protein concentration [mM]")
+    plotmodelines(betpar,mpost,"post. m.")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     #plotmodelines(betpar,mpost,"mpost")
@@ -190,9 +191,9 @@ function plotmodelines(betpar,mcur,modname; firstidpar=1)
         else
             plot(xm,ym,"-k",linewidth=0.7)
         end
-        plot(xm[[1,end]],ym[[1,end]],"ok",markersize=5.0)
+        plot(xm[[1,end]],ym[[1,end]],"ok",markersize=2.0)
     end
-    legend()
+    legend(loc="lower right")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
 end

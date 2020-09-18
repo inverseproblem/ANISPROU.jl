@@ -630,9 +630,9 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
 
         if betpar.konfuny=="linear"
             # constr. on angular coeff. of kon being negative
-            lnlc = append!(lnlc,-Inf*ones(ncomp)...)
+            lnlc = append!(lnlc,-Inf*ones(ncomp))
             # constr. on angular coeff. of kon being negative
-            unlc = append!(unlc,zeros(ncomp)...)
+            unlc = append!(unlc,zeros(ncomp))
         end
 
         ## init constraints
@@ -647,7 +647,8 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
 
         function checknonlinconstr(betpar,cst,lnlc,unlc,mstvec,protein)
             cst = con_c!(cst,mstvec)
-            fulfillconstr = all(lnlc.<=cst.<=unlc)
+            fulfeachcon = lnlc.<=cst.<=unlc
+            fulfillconstr = all(fulfeachcon)
             # if !fulfillconstr
             #     npar = betpar.nummodpar
             #     ncomp = div(length(mstvec),npar)
@@ -656,7 +657,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             #     plotparamlines(betami)
             #     println(lnlc.<=cst.<=unlc)
             # end
-            return fulfillconstr
+            return fulfillconstr,fulfeachcon
         end
 
         ##===============================================
@@ -705,21 +706,29 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         plotparamlines(betami)
         error("solveinvprob(): mode<betpar.a at protein concentration=0.0 from the starting model.")
     end
-
+    
+    # check linear constraints
+    fulfilleachLINcon = (lowconstr .<= mstart .<= upconstr)
+    fulfillLINcon = all(fulfilleachLINcon)
+    if !fulfillLINcon
+        @warn("solveinvprob(): linear constraints not fulfilled by starting model")
+        println("Fulfilled linear constraints: ",string(fulfilleachLINcon))
+    end 
+    
     ##===================================================
     ## Objective function without constraints
-    # df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) #fun_grad!, fun_hess!, mstartvec)
+    # df = TwiceDifferentiable(closmisfitOPTIM,mstartvec,autodiff=:forward) 
     df = TwiceDifferentiable(closmisfitOPTIM,fun_grad!, fun_hess!, mstartvec)
     
     
-    ## Add constraints
+    ## Add lin/nonlinear constraints
     if applynonlinconstr
         # check if starting model fulfills nonlinear constraints
-        fullfillconstr = checknonlinconstr(betpar,cst,lnlc,unlc,mstartvec,dobs.protein)
-        #@show fullfillconstr
-        # if !fullfillconstr
-        #     error("solveinvprob(): NONlinear constraints not fulfilled by starting model")
-        # end
+        fullfillNONlinconstr,fulfeachNONlincon = checknonlinconstr(betpar,cst,lnlc,unlc,mstartvec,dobs.protein)
+        if !fullfillNONlinconstr
+            @warn("solveinvprob(): NONlinear constraints not fulfilled by starting model")
+            println("Fulfilled NONlinear constraints: ",string(fulfeachNONlincon))
+        end
         # linear and NONlinear constraints
         dfc = TwiceDifferentiableConstraints(con_c!, con_jacob!, con_hess!,
                                              vlowconstr, vupconstr, lnlc, unlc)
@@ -766,35 +775,48 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     end
 
     ##-------------------------------------------------------
-    # save in HDF5 format
-    outfile1 = joinpath(outdir,dobs.protein*"_ITCresults.h5")
-    println("Saving results in HDF5 to $outfile1\n")
+    # save in JLD2 format
+    outfile1 = joinpath(outdir,dobs.protein*"_ITCinvresults.jld2")
+    println("Saving results in JLD2 to $outfile1\n")
+    jldopen(outfile1, "w") do fl
+        fl["betamix"] = betmix
+        fl["dobs"] = dobs
+        fl["mstart"] = mstart
+        fl["lowconstr"] = lowconstr
+        fl["upconstr"] = upconstr
+        fl["invCd"] = invCd
+    end
 
-    hf = h5open(outfile1,"w")
-    hf["protein"] = dobs.protein
-    hf["mpost"] = mpost
-    hf["enthalpy"] = dobs.enthalpy
-    hf["sdscon"] = dobs.sdsprotcon[:,1] # sdscon
-    hf["procon"] = dobs.sdsprotcon[:,2] # procon
-    hf["beta_a"] = betpar.a
-    hf["beta_b"] = betpar.b
-    hf["beta_ymin"] = betpar.ymax
-    hf["beta_ymax"] = betpar.ymin
-    hf["nummodpar"] = betpar.nummodpar
-    hf["mstart"] = mstart
-    hf["lowconstr"] = lowconstr
-    hf["upconstr"] = upconstr
-    hf["invCd"] = invCd
-    hf["modefuncy"] = betpar.modefuny
-    hf["konfuncy"]  = betpar.konfuny
-    hf["ampfuncy"] = betpar.ampfuny
-    close(hf)
+    ##-------------------------------------------------------
+    # save in HDF5 format
+    # outfile1 = joinpath(outdir,dobs.protein*"_ITCresults.h5")
+    # println("Saving results in HDF5 to $outfile1\n")
+
+    # hf = h5open(outfile1,"w")
+    # hf["protein"] = dobs.protein
+    # hf["mpost"] = mpost
+    # hf["enthalpy"] = dobs.enthalpy
+    # hf["sdscon"] = dobs.sdsprotcon[:,1] # sdscon
+    # hf["procon"] = dobs.sdsprotcon[:,2] # procon
+    # hf["beta_a"] = betpar.a
+    # hf["beta_b"] = betpar.b
+    # hf["beta_ymin"] = betpar.ymax
+    # hf["beta_ymax"] = betpar.ymin
+    # hf["nummodpar"] = betpar.nummodpar
+    # hf["mstart"] = mstart
+    # hf["lowconstr"] = lowconstr
+    # hf["upconstr"] = upconstr
+    # hf["invCd"] = invCd
+    # hf["modefuncy"] = betpar.modefuny
+    # hf["konfuncy"]  = betpar.konfuny
+    # hf["ampfuncy"] = betpar.ampfuny
+    # close(hf)
 
     ##-------------------------------------------------------
     # save in plain text format
-    outfile2 = joinpath(outdir,dobs.protein*"_ITCresults.dat")
+    outfile2 = joinpath(outdir,dobs.protein*"_ITCinvresults.dat")
     println("Saving results in text file to $outfile2\n")
-    header = "# Output model parameters where each column represents a single Beta component "
+    header = "# Output model parameters where each column represents a single Beta component for protein $(dobs.protein)"
 
     ofl = open(outfile2,"w")
     writedlm(ofl,[header])

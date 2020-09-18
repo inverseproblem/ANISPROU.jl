@@ -15,45 +15,46 @@ function launchall()
     betamix,dobs = invertITCdata(inpdir,protein)
 
     # ## plot straight lines defined by parameters as a function of concentration
-    # plotparamlines(betamix)
+    #plotparamlines(betamix)
 
     # ## plot single components for fixed protein concentration
-    # plotbetacomp1D(betamix,0.148)
+    #plotbetacomp1D(betamix,0.148)
    
-    # plot 3D surface from results
-    if isdefined(@__MODULE__,:Makie)
-        plotsurface3D(dobs,betamix,yscal=70,ymin=0.0)
-    end
+    # # plot 3D surface from results
+    # if isdefined(@__MODULE__,:Makie)
+    #     plotsurface3D(dobs,betamix,yscal=70,ymin=0.0)
+    # end
 
-    ## plot fit to single experiments
-    outdir="figs"
-    plotsingleexperiments(outdir,dobs,betamix)
+    # ## plot fit to single experiments
+    # outdir="figs"
+    # plotsingleexperiments(outdir,dobs,betamix)
 
 
-    ##===========================================================
-    ## compute area for all Beta components at
-    ##   requested protein concentration
-    protcon = 0.08
-    area,errarea = area_enthalpy(betamix,protcon)
-    println("\nArea at protein concentration $protcon for each component: $area, error $errarea\n")
+    # ##===========================================================
+    # ## compute area for all Beta components at
+    # ##   requested protein concentration
+    # protcon = 0.08
+    # area,errarea = area_enthalpy(betamix,protcon)
+    # println("\nArea at protein concentration $protcon for each component: $area, error $errarea\n")
 
     ## Area for a set of protein concentrations
     N = 15
     protcons = collect(LinRange(0.0,0.14,N))
-    areas,erras = areasvsprotcon(betamix,protcons)
+    outdir = "output"
+    areas,erras = areasvsprotcon(betamix,protcons,outdir,protein)
 
-    ## plot areas only
-    # plotareavsprotcon(protcons,areas)
-    ## plot parameters lines and areas
-    plotparamlines(betamix,protcons,areas)
+    # ## plot areas only
+    # # plotareavsprotcon(protcons,areas)
+    # ## plot parameters lines and areas
+    # plotparamlines(betamix,protcons,areas)
 
 
-    ## compute volume for all Beta components within
-    ##   requested bounds of protein concentration
-    minprotcon = betamix.betpar.ymin
-    maxprotcon = betamix.betpar.ymax
-    volume,errvol = volume_enthalpy(betamix,minprotcon,maxprotcon)
-    println("\nVolume within bounds for each component: $volume, error $errvol\n")
+    # ## compute volume for all Beta components within
+    # ##   requested bounds of protein concentration
+    # minprotcon = betamix.betpar.ymin
+    # maxprotcon = betamix.betpar.ymax
+    # volume,errvol = volume_enthalpy(betamix,minprotcon,maxprotcon)
+    # println("\nVolume within bounds for each component: $volume, error $errvol\n")
 
 
     ##===========================================================
@@ -208,9 +209,7 @@ function invertITCdata(inpdir::String,protein::String)
     ###############################################
     ## run the Newton optimization
     nobs = length(dobs.enthalpy)
-    stdobs = 0.2 .* ones(nobs)   #2.0 .* ones(nobs)
-    stdobs[1:2] .= 0.8
-    stdobs[end-5:end] .= 0.5
+    stdobs = 0.5 .* ones(nobs)  
     @show stdobs
     Cd = diagm(stdobs.^2)
     invCd = inv(Cd)
@@ -244,61 +243,61 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
 
     ##===========================================
     ## Selection of local minima and maxima
-    locminmax = [] ##Vector{Array{<:Real,2}}(undef,0)
+    selectstatpts = Vector{Array{<:Real,2}}(undef,0)
     
-    push!(locminmax, [ statpts[1][2] protcon[1];
-                       statpts[2][2] protcon[2];
-                       statpts[3][2] protcon[3];
-                       statpts[4][2] protcon[4] ] )
+    push!(selectstatpts, [ statpts[1][2] protcon[1];
+                           statpts[2][2] protcon[2];
+                           statpts[3][2] protcon[3];
+                           statpts[4][2] protcon[4] ] )
     
-    push!(locminmax, [ statpts[3][3] protcon[3];
-                       statpts[4][3] protcon[4] ] )
+    push!(selectstatpts, [ statpts[3][3] protcon[3];
+                           statpts[4][3] protcon[4] ] )
 
-    push!(locminmax, [ statpts[2][4] protcon[2];
-                       statpts[3][4] protcon[3];
-                       statpts[4][4] protcon[4] ] )
+    push!(selectstatpts, [ statpts[2][4] protcon[2];
+                           statpts[3][4] protcon[3];
+                           statpts[4][4] protcon[4] ] )
 
-    push!(locminmax, [ statpts[1][5] protcon[1];
-                       statpts[2][5] protcon[2];
-                       statpts[3][5] protcon[3];
-                       statpts[4][5] protcon[4] ] )
+    push!(selectstatpts, [ statpts[1][5] protcon[1];
+                           statpts[2][5] protcon[2];
+                           statpts[3][5] protcon[3];
+                           statpts[4][5] protcon[4] ] )
 
-    push!(locminmax, [ statpts[1][6] protcon[1];
-                       statpts[2][6] protcon[2];
-                       statpts[3][6] protcon[3];
-                       statpts[4][6] protcon[4] ] )
-
+    push!(selectstatpts, [ statpts[1][6] protcon[1];
+                           statpts[2][6] protcon[2];
+                           statpts[3][6] protcon[3];
+                           statpts[4][6] protcon[4] ] )
+    
 
     ##===========================================
     ## Selection of inflection points
-    inflectionpts = [] ##Vector{Array{<:Real,2}}(undef,0)
+    selectinflpts = Vector{Array{<:Real,2}}(undef,0)
     
-    push!(inflectionpts, [ inflpts[1][2] protcon[1];
+    push!(selectinflpts, [ inflpts[1][2] protcon[1];
                            inflpts[2][2] protcon[2];
                            inflpts[3][2] protcon[3];
                            inflpts[4][2] protcon[4] ] )
     
-    push!(inflectionpts, [ inflpts[1][3] protcon[1];
+    push!(selectinflpts, [ inflpts[1][3] protcon[1];
                            inflpts[2][3] protcon[2];
                            inflpts[3][3] protcon[3];
                            inflpts[4][3] protcon[4] ] )
 
-    push!(inflectionpts, [ inflpts[1][4] protcon[1];
+    push!(selectinflpts, [ inflpts[1][4] protcon[1];
                            inflpts[2][4] protcon[2];
                            inflpts[3][4] protcon[3];
                            inflpts[4][4] protcon[4] ] )
     
-    push!(inflectionpts, [ inflpts[1][5] protcon[1];
+    push!(selectinflpts, [ inflpts[1][5] protcon[1];
                            inflpts[2][5] protcon[2];
                            inflpts[3][5] protcon[3];
                            inflpts[4][5] protcon[4] ] )
 
-    push!(inflectionpts, [ inflpts[1][6] protcon[1];
+    push!(selectinflpts, [ inflpts[1][6] protcon[1];
                            inflpts[2][6] protcon[2];
                            inflpts[3][6] protcon[3];
                            inflpts[4][6] protcon[4] ] )
 
-    push!(inflectionpts, [ inflpts[1][7] protcon[1];
+    push!(selectinflpts, [ inflpts[1][7] protcon[1];
                            inflpts[2][7] protcon[2];
                            inflpts[3][7] protcon[3];
                            inflpts[4][7] protcon[4] ] )
@@ -308,9 +307,11 @@ function bindingisotherm_betamix(betamix::BetaMix2D,dobs::ITCObsData)
     ## Linear regression to get the parameters of straight lines
 
     ## find the straight line by least squares
-    lstlines = [locminmax..., inflectionpts...]
-
-    freeSDS,Nbound = calcfreeSDSNbound(lstlines)
+    ## lstlines = [selectstatpts..., selectinflpts...]
+    outdir = "output"
+    freeSDS,Nbound = calcfreeSDSNbound(protcon,statpts,inflpts,
+                                       selectstatpts,selectinflpts,
+                                       outdir,dobs.protein)
 
     ##===========================================
     ## Plot stuff

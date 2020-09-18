@@ -6,7 +6,16 @@ $(TYPEDSIGNATURES)
 
 Calculate the concentration of free SDS (freeSDS) and binding number (NBound).
 """
-function calcfreeSDSNbound(lstlines::Array{<:Array{<:Real,2},1}) #Vector{Array{<:Real,2}})
+function calcfreeSDSNbound(protcons::Vector{<:Real},
+                           statpts::Array{Vector{Float64}},
+                           inflpts::Array{Vector{Float64}},
+                           selectstatpts::Vector{<:Array{<:Real,2}},
+                           selectinflpts::Vector{<:Array{<:Real,2}},
+                           outdir::String,protein::String) #Vector{Array{<:Real,2}})
+
+    
+    lstlines = [selectstatpts..., selectinflpts...]
+
     nlines = length(lstlines)
     intercept = Vector{Float64}(undef,nlines)
     angcoe = Vector{Float64}(undef,nlines)
@@ -26,6 +35,32 @@ function calcfreeSDSNbound(lstlines::Array{<:Array{<:Real,2},1}) #Vector{Array{<
     idxsort = sortperm(freeSDS)
     freeSDS = freeSDS[idxsort] 
     Nbound  = Nbound[idxsort] 
+
+
+    ##-------------------------------------------------------
+    # save in JLD2 format
+    outfile1 = joinpath(outdir,protein*"_ITCbindingisoth.jld2")
+    println("Saving binding isotherm data in JL2 to $outfile1\n")
+    jldopen(outfile1, "w") do fl
+        fl["protcons"] = protcons
+        fl["statpts"] = statpts
+        fl["inflpts"] = inflpts
+        fl["selectedstatpts"] = selectstatpts
+        fl["selectedinflpts"] = selectinflpts
+        fl["freeSDS"] = freeSDS
+        fl["Nbound"] = Nbound
+    end
+
+    ##-------------------------------------------------------
+    # save in plain text format
+    outdata = [freeSDS Nbound]
+    outfile2 = joinpath(outdir,protein*"_ITCbindingisoth.dat")
+    println("Saving results in text file to $outfile2\n")
+    header = "# Binding isotherm results for protein $protein, columns: freeSDS and Nbound"
+    ofl = open(outfile2,"w")
+    writedlm(ofl,[header])
+    writedlm(ofl,outdata)
+    close(ofl)
 
     return freeSDS,Nbound
 end
