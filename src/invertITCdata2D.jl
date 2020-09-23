@@ -641,7 +641,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             ncomp = div(length(ccmcur),betpar.nummodpar)
             npar = betpar.nummodpar
             cstfun = Array{Any,1}(undef,0) #ncomp+ncomp+1)
-
+            nonlincstnames = Array{Any,1}(undef,0) 
          
             ## constraintS on mode at [protein]=0
             ycur = 0.0
@@ -649,6 +649,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             for ic=1:ncomp
                 acfun = ccmcur->modeconstraint(betpar,ic,ccmcur)
                 push!(cstfun,acfun)
+                push!(nonlincstnames,"NONlinear constraint on mode at [protein]=0, Beta component #$ic")
                 ifun+=1
             end
 
@@ -656,6 +657,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             for ic=1:ncomp
                 acfun = ccmcur->konconstraint(betpar,ic,ccmcur)
                 push!(cstfun,acfun)
+                push!(nonlincstnames,"NONlinear constraint on confidence at [protein]=0, Beta component #$ic")
                 ifun+=1
             end
         
@@ -680,12 +682,14 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                 for ic=1:ncomp
                     acfun = ccmcur->nonintersectmodeconstr_below(betpar,ic,pconc,ccmcur)
                     push!(cstfun,acfun)
+                    push!(nonlincstnames,"NONlinear constraint on non-overlapping mode lines BELOW, Beta component #$ic")
                     ifun+=1
                 end
                 ## constraints on the nonoverlapping mode lines ABOVE
                 for ic=1:ncomp
                     acfun = ccmcur->nonintersectmodeconstr_above(betpar,ic,pconc,ccmcur)
                     push!(cstfun,acfun)
+                    push!(nonlincstnames,"NONlinear constraint on non-overlapping mode lines ABOVE, Beta component #$ic")
                     ifun+=1
                 end
             end
@@ -698,6 +702,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                 for ic=1:ncomp
                     acfun = ccmcur->angcoekonconstraint(betpar,ic,ccmcur)
                     push!(cstfun,acfun)
+                    push!(nonlincstnames,"NONlinear constraint on angular coefficient for confidence parameter, Beta component #$ic")
                     ifun+=1
                 end
             end
@@ -707,15 +712,16 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                for ic=1:ncomp
                    acfun = ccmcur->decramplconstraint(betpar,ic,ccmcur)
                    push!(cstfun,acfun)
+                   push!(nonlincstnames,"NONlinear constraint on decresing amplitude towards prot. conc.=0, Beta component #$ic")
                    ifun+=1
                 end 
             end
             
-            return cstfun
+            return cstfun,nonlincstnames
         end
 
         ## actually create the functions
-        cstfun = funcon_c(betpar,vec(mstart))
+        cstfun,nonlincstnames = funcon_c(betpar,vec(mstart))
 
 
         #-------------------------------
@@ -847,7 +853,15 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     fulfillLINcon = all(fulfilleachLINcon)
     if !fulfillLINcon
         @warn("solveinvprob(): linear constraints not fulfilled by starting model")
-        println("Fulfilled linear constraints: ",string(fulfilleachLINcon))
+        #println("Fulfilled linear constraints: ",string(fulfilleachLINcon))
+        np,nc=size(fulfilleachLINcon)
+        for ic=1:nc
+            for ip=1:np
+                if fulfilleachLINcon[ip,ic]==false
+                    println("NOT FULFILLED: Linear constraint for parameter #$ip from Beta component #$ic")
+                end
+            end
+        end            
     end 
     
     ##===================================================
@@ -862,7 +876,12 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         fullfillNONlinconstr,fulfeachNONlincon = checknonlinconstr(betpar,cst,lnlc,unlc,mstartvec,dobs.protein)
         if !fullfillNONlinconstr
             @warn("solveinvprob(): NONlinear constraints not fulfilled by starting model")
-            println("Fulfilled NONlinear constraints: ",string(fulfeachNONlincon))
+            #println("Fulfilled NONlinear constraints: ",string(fulfeachNONlincon))
+            for i=1:length(fullfillNONlinconstr)
+                if fullfillNONlinconstr[i]==false
+                    println("NOT FULFILLED: ",nonlincstnames[i])
+                end
+            end
         end
         # linear and NONlinear constraints
         dfc = TwiceDifferentiableConstraints(con_c!, con_jacob!, con_hess!,
