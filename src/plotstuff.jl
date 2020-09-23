@@ -225,6 +225,10 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
 
 
     figure(figsize=(12,9))
+    ylab = ["SDS concentration [mM]",
+            "Confidence parameter",
+            "Enthalpy"]
+    
     for ip=1:3
 
         subplot(2,2,ip)
@@ -274,6 +278,7 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
 
             plot(xm,ym,"-",linewidth=1,label="comp. $i")
             plot(xm[[1,end]],ym[[1,end]],".k",markersize=5.0)
+            ylabel(ylab[ip])
 
         end
         legend()

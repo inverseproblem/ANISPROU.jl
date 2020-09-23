@@ -504,8 +504,11 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     #------------------------------------------------
 
     if applynonlinconstr
-
+        maxSDSc = 1e9
+        
         function modeconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ## compute the value of mode at prot. conc.=0
+            ##   for a single beta function (ic)
             ycur = 0.0
             npar = betpar.nummodpar
             ncomp = div(length(ccmcur),npar)
@@ -515,6 +518,8 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         end
 
         function konconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ## compute the value of kon at prot. conc.=0
+            ##   for a single beta function (ic)
             ycur = 0.0
             npar = betpar.nummodpar
             ncomp = div(length(ccmcur),npar)
@@ -524,6 +529,8 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         end
         
         function ampconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ## compute the value of amplitude at prot. conc.=0
+            ##   for a single beta function (ic)
             ycur = 0.0
             npar = betpar.nummodpar
             ncomp = div(length(ccmcur),npar)
@@ -533,6 +540,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         end
         
         function areaconstraint(betpar,ccmcur)
+            ## compute the value of the area at prot. conc.=0
             ncomp = div(length(ccmcur),betpar.nummodpar)
             npar = betpar.nummodpar
             mcur2d = reshape(ccmcur,npar,ncomp)
@@ -540,8 +548,10 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             return mar
         end
 
-        function angcoekonconstraint(betpar,ic::Integer,ccmcur)\
+        function angcoekonconstraint(betpar,ic::Integer,ccmcur)
             @assert betpar.konfuny=="linear"
+            ## angular coefficient for kon parameter being negative
+            ##    (shrinking functions), only if konfuny=="linear"
             npar = betpar.nummodpar
             ncomp = div(length(ccmcur),npar)
             ccmcur2d = reshape(ccmcur,npar,ncomp)
@@ -552,6 +562,79 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             return kangcoe
         end
 
+        
+        function modeatprotcon(betpar,ic::Integer,pconc::Real,ccmcur::Vector{<:Real})
+            ## compute the value of mode at prot. conc.=0
+            ##   for a single beta function (ic)
+            ycur = pconc #0.0
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
+            return mode
+        end
+
+        function nonintersectmodeconstr_below(betpar,ic::Integer,pconc::Real,ccmcur::Vector{<:Real})
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            if ic==1
+                # first Beta function
+                modbelow = 0.0 # SDS=0.0 is the minimum that makes sense
+            else
+                # other Beta functions
+                modbelow = modeatprotcon(betpar,ic-1,pconc,ccmcur) ## ic-1, Beta below
+            end
+            modcur = modeatprotcon(betpar,ic,pconc,ccmcur)
+            ## difference in terms of SDS
+            moddif = modcur-modbelow
+            return moddif
+        end
+        
+        function nonintersectmodeconstr_above(betpar,ic::Integer,pconc::Real,ccmcur::Vector{<:Real})
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            if ic==ncomp
+                # last Beta function
+                modabove = maxSDSc #+Inf # SDS
+            else
+                # other Beta functions
+                modabove = modeatprotcon(betpar,ic+1,pconc,ccmcur) ## ic-1, Beta below
+            end
+            modcur = modeatprotcon(betpar,ic,pconc,ccmcur)
+            ## difference in terms of SDS
+            moddif = modabove-modcur
+            return moddif
+        end
+
+
+
+        function ampatpconc(betpar,ic::Integer,pconc,ccmcur::Vector{<:Real})
+            ## compute the value of amplitude at prot. conc.=0
+            ##   for a single beta function (ic)
+            ycur = pconc
+            npar = betpar.nummodpar
+            ncomp = div(length(ccmcur),npar)
+            ccmcur2d = reshape(ccmcur,npar,ncomp)
+            mode,kon,amp = getmodparbeta(betpar,ccmcur2d[:,ic],ycur)
+            return amp
+         end
+        
+        function decramplconstraint(betpar,ic::Integer,ccmcur::Vector{<:Real})
+            ##    trying to push towards zero amplitude at prot. conc.=0
+            pc1=0.0
+            pc2=betpar.ymax
+            ## difference of amp between prot. conc. at betpar.ymax and 0.0
+            amplat0 = ampatpconc(betpar,ic,pc1,ccmcur)
+            amplatend = ampatpconc(betpar,ic,pc2,ccmcur)
+            decamp = abs(amplatend)-abs(amplat0)
+            # if amplat0<0.0
+            #     #change sign
+            #     decamp = -decamp
+            # end
+            # @show ic,decamp,amplat0,amplatend
+            return decamp
+        end
+
         #------------------------------------------------
 
         function funcon_c(betpar,ccmcur) #ccmcur::Vector{<:Real})
@@ -559,6 +642,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             npar = betpar.nummodpar
             cstfun = Array{Any,1}(undef,0) #ncomp+ncomp+1)
 
+         
             ## constraintS on mode at [protein]=0
             ycur = 0.0
             ifun = 1
@@ -574,6 +658,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                 push!(cstfun,acfun)
                 ifun+=1
             end
+        
 
             # ## constraints on amp at [protein]=0
             # for ic=1:ncomp
@@ -582,10 +667,31 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             #     ifun+=1
             # end
             
-            ## constraint on area
+            ## constraint on area at prot. conc.=0
             acfun = ccmcur-> areaconstraint(betpar,ccmcur)
             push!(cstfun,acfun)
-            ifun+=1
+            ifun+=1      
+
+        
+            ## set constraints at prot. conc. 0.0 and ? such that
+            ##  the mode lines cannot intersect
+            for pconc in [0.0,betpar.ymax]
+                ## constraints on the nonoverlapping mode lines BELOW
+                for ic=1:ncomp
+                    acfun = ccmcur->nonintersectmodeconstr_below(betpar,ic,pconc,ccmcur)
+                    push!(cstfun,acfun)
+                    ifun+=1
+                end
+                ## constraints on the nonoverlapping mode lines ABOVE
+                for ic=1:ncomp
+                    acfun = ccmcur->nonintersectmodeconstr_above(betpar,ic,pconc,ccmcur)
+                    push!(cstfun,acfun)
+                    ifun+=1
+                end
+            end
+
+            #############################################
+            ## THE FOLLOWING MUST BE LAST CONSTRAINTS
 
             # angular coefficient for kon parameter being negative (shrinking functions), only if konfuny=="linear"
             if betpar.konfuny=="linear"
@@ -596,11 +702,21 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                 end
             end
 
+            ## constraint on decreasing amplitude towards prot. con.=0
+            if betpar.ampfuny=="linear"
+               for ic=1:ncomp
+                   acfun = ccmcur->decramplconstraint(betpar,ic,ccmcur)
+                   push!(cstfun,acfun)
+                   ifun+=1
+                end 
+            end
+            
             return cstfun
         end
 
         ## actually create the functions
         cstfun = funcon_c(betpar,vec(mstart))
+
 
         #-------------------------------
 
@@ -608,6 +724,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             N=length(cstfun)
             for i=1:N
                 cst[i] = cstfun[i](ccmcur)
+                #@show i,cst[i]
             end
             return cst
         end
@@ -620,20 +737,38 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         lnlc = [zeros(ncomp)...,      # constr. on mode at [prot]==0
                 2.5*ones(ncomp)...,   # constr. on kon at [prot]==0
                 #-maxamp*ones(ncomp)..., # constr. on amp at [prot]==0
-                0.0 ]          # constr. on area
+                0.0,           # constr. on area
+                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=0 below
+                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=0 above
+                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=? below
+                0.1.+zeros(ncomp)... ] # constr. mode at prot. conc.=? above
 
+        
         unlc = [betpar.b*ones(ncomp)..., # constr. on mode at [prot]==0
                 Inf*ones(ncomp)...,      # constr. on kon at [prot]==0
                 #maxamp*ones(ncomp)...,  # constr. on amp at [prot]==0
-                constrarea ]              # constr. on area
+                constrarea,              # constr. on area
+                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=0 below
+                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=0 above
+                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=? below
+                maxSDSc.*ones(ncomp)... ] # constr. mode at prot. conc.=? above
+        
 
-
+        
         if betpar.konfuny=="linear"
-            # constr. on angular coeff. of kon being negative
+            # constr. on decreasing amplitude towards prot. con.=0
             lnlc = append!(lnlc,-Inf*ones(ncomp))
-            # constr. on angular coeff. of kon being negative
+            # constr. on decreasing amplitude towards prot. con.=0
             unlc = append!(unlc,zeros(ncomp))
         end
+
+        if betpar.ampfuny=="linear"
+            # constr. on decreasing amplitude towards prot. con.=0
+            lnlc = append!(lnlc,zeros(ncomp))
+            # constr. on decreasing amplitude towards prot. con.=0
+            unlc = append!(unlc,maxSDSc.*ones(ncomp))
+        end
+ 
 
         ## init constraints
         cst = zeros(Real,length(lnlc))
