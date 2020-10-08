@@ -294,7 +294,7 @@ function singlescaledbeta2D(betpar::ScaledBeta2DParams,xy::Array{<:Real,2},mcur:
 
     # pre-allocate array of arrays (one for each y value)
     npts = size(xy,1)
-    scbeta2d = zeros(Real,npts) #zeros(eltype(mcur),npts)
+    scbeta2d = zeros(Real,npts) #?? #zeros(eltype(mcur),npts)
     for l=1:npts
         ## xy[l,1] -> SDS concentration
         ## xy[l,2] -> protein concentration
@@ -672,6 +672,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             ## constraint on area at prot. conc.=0
             acfun = ccmcur-> areaconstraint(betpar,ccmcur)
             push!(cstfun,acfun)
+            push!(nonlincstnames,"NONlinear constraint on value of area at prot. conc.=0")
             ifun+=1      
 
         
@@ -723,7 +724,6 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         ## actually create the functions
         cstfun,nonlincstnames = funcon_c(betpar,vec(mstart))
 
-
         #-------------------------------
 
         function con_c!(cst,ccmcur::Vector{<:Real})
@@ -744,20 +744,20 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
                 2.5*ones(ncomp)...,   # constr. on kon at [prot]==0
                 #-maxamp*ones(ncomp)..., # constr. on amp at [prot]==0
                 0.0,           # constr. on area
-                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=0 below
-                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=0 above
-                0.1.+zeros(ncomp)..., # constr. mode at prot. conc.=? below
-                0.1.+zeros(ncomp)... ] # constr. mode at prot. conc.=? above
+                0.1.+zeros(ncomp)..., # constr. non-overlapping mode at prot. conc.=0 below
+                0.1.+zeros(ncomp)..., # constr. non-overlapping mode at prot. conc.=0 above
+                0.1.+zeros(ncomp)..., # constr. non-overlapping mode at prot. conc.=? below
+                0.1.+zeros(ncomp)... ] # constr. non-overlapping mode at prot. conc.=? above
 
         
         unlc = [betpar.b*ones(ncomp)..., # constr. on mode at [prot]==0
                 Inf*ones(ncomp)...,      # constr. on kon at [prot]==0
                 #maxamp*ones(ncomp)...,  # constr. on amp at [prot]==0
                 constrarea,              # constr. on area
-                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=0 below
-                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=0 above
-                maxSDSc.*ones(ncomp)..., # constr. mode at prot. conc.=? below
-                maxSDSc.*ones(ncomp)... ] # constr. mode at prot. conc.=? above
+                maxSDSc.*ones(ncomp)..., # constr. non-overlapping mode at prot. conc.=0 below
+                maxSDSc.*ones(ncomp)..., # constr. non-overlapping mode at prot. conc.=0 above
+                maxSDSc.*ones(ncomp)..., # constr. non-overlapping mode at prot. conc.=? below
+                maxSDSc.*ones(ncomp)... ] # constr. non-overlapping mode at prot. conc.=? above
         
 
         
@@ -790,7 +790,6 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
             cst = con_c!(cst,mstvec)
             fulfeachcon = lnlc.<=cst.<=unlc
             fulfillconstr = all(fulfeachcon)
-            # if !fulfillconstr
             #     npar = betpar.nummodpar
             #     ncomp = div(length(mstvec),npar)
             #     mst = reshape(mstvec,npar,ncomp)
@@ -877,9 +876,10 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         if !fullfillNONlinconstr
             @warn("solveinvprob(): NONlinear constraints not fulfilled by starting model")
             #println("Fulfilled NONlinear constraints: ",string(fulfeachNONlincon))
-            for i=1:length(fullfillNONlinconstr)
-                if fullfillNONlinconstr[i]==false
-                    println("NOT FULFILLED: ",nonlincstnames[i])
+            for i=1:length(fulfeachNONlincon)
+                if fulfeachNONlincon[i]==false
+                    println("##==> Cst #$i NOT FULFILLED: ",nonlincstnames[i])
+                    println("##==> Cst #$i: lower constr. $(lnlc[i]) <= value: $(cst[i]) <= upper constr. $(unlc[i])")
                 end
             end
         end
