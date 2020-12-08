@@ -939,6 +939,11 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         fl["lowconstr"] = lowconstr
         fl["upconstr"] = upconstr
         fl["invCd"] = invCd
+        if applynonlinconstr
+            fl["lowNONlinconstr"] = lnlc
+            fl["upNONlinconstr"] = unlc
+            fl["NONlinconstrNAMES"] = nonlincstnames
+        end
     end
 
     ##-------------------------------------------------------
