@@ -736,7 +736,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         end
 
         ##===================================
-        ## Set NONlinear constratints        
+        ## Set NONlinear constraints        
         ncomp = size(mstart,2)
         #maxamp = 1.0
 
