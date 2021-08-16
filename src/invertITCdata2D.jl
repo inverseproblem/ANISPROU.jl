@@ -439,6 +439,11 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
 - `constrarea`=0.0: a positive real number defining lower and upper constraints [-constrarea,constrarea] 
                    for the value of area (enthalpy) at protein concentration equal to zero
 
+# Returns 
+
+A structure holding Beta parameters and the solution in terms of mode, confidence parameter and amplitude.
+It also saves all the setup of the problem and a set of parameters to an HDF5 file. 
+
 """
 function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{<:Real},
                       mstart::Matrix{<:Real},lowconstr::Matrix{<:Real},upconstr::Matrix{<:Real},
@@ -895,7 +900,9 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     println("\nRunning optimization with IPNewton...\n")
     # FAILURE using:  Optim.Options(store_trace=true,extended_trace=true) ????
     #result = optimize(df, dfc, mstartvec, IPNewton() ) #, Optim.Options(store_trace=true,extended_trace=true))
-    result = optimize(df, dfc, mstartvec, IPNewton() ) #, Optim.Options() )
+    # result = optimize(df, dfc, mstartvec, IPNewton() ) #, Optim.Options() )
+    # to get Hessian: store_trace=true,extended_trace=true
+    result = optimize(df, dfc, mstartvec, IPNewton(), Optim.Options(store_trace=true,extended_trace=true))
 
     rcon=Optim.converged(result)
     if rcon==false
@@ -920,6 +927,11 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     ## show some info
     println(result)
 
+    ## inverse Hessian
+    @show size(result.trace[end].metadata["h(x)"])
+    hessian = result.trace[end].metadata["h(x)"]
+
+
     ##================================
     ## save data
     try
@@ -931,7 +943,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     ##-------------------------------------------------------
     # save in JLD2 format
     outfile1 = joinpath(outdir,dobs.protein*"_ITCinvresults.jld2")
-    println("Saving results in JLD2 to $outfile1\n")
+    println("Saving results in JLD2 to $outfile1")
     jldopen(outfile1, "w") do fl
         fl["betamix"] = betmix
         fl["dobs"] = dobs
@@ -939,6 +951,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
         fl["lowconstr"] = lowconstr
         fl["upconstr"] = upconstr
         fl["invCd"] = invCd
+        fl["hessian"] = hessian
         if applynonlinconstr
             fl["lowNONlinconstr"] = lnlc
             fl["upNONlinconstr"] = unlc
