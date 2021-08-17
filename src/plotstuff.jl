@@ -393,9 +393,10 @@ end
 $(TYPEDSIGNATURES)
 
 Plot the results of binding isotherm calculations using the Beta mix, i.e., sum of all Beta fitting functions.
+
 """
-function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
-                          freeSDS,Nbound,outdir)
+function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir;
+                          resstdev=nothing)
 
     protein = betamix.protein
     N = 1000
@@ -441,7 +442,14 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,
     ##
     subplot(212)
     title("Binding isotherm for protein $protein")
-    plot([0.0, freeSDS...],[0.0, Nbound...],"o-")
+    xbi = [0.0, freeSDS...]
+    ybi = [0.0, Nbound...]
+    if resstdev!=nothing
+        resstdevbi = [0.0,resstdev...]
+        scatter(xbi,ybi,c=resstdevbi,cmap=PyPlot.cm_get_cmap("rainbow"))
+        colorbar(label="residuals standard dev.")
+    end
+    plot(xbi,ybi,"-")
     xlabel("free SDS concentration [mM]")
     ylabel("Nbound")
 

@@ -105,11 +105,11 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::Str
     ## linear fit to area curves
     angcoe = Vector{Float64}(undef,ncomp)
     intercept = Vector{Float64}(undef,ncomp)
+    resstdev = Vector{Float64}(undef,ncomp)
     for i=1:ncomp
-        angcoe[i],intercept[i] = lssqregr([protcons areas[:,i] ])
+        angcoe[i],intercept[i],resstdev[i] = lssqregr([areas[:,i] protcons])
     end
     linfitres = [angcoe intercept]
-   
 
     ##-------------------------------------------------------
     # save in JLD2 format
@@ -119,6 +119,7 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::Str
         fl["linearfit"] = linfitres
         fl["areas"] = areas
         fl["errar"] = errar
+        fl["resstdev"] = resstdev
         fl["protconareas"] = protcons
         fl["volumescal"] = volumescal
     end
@@ -134,7 +135,7 @@ function areasvsprotcon(betamix::BetaMix2D,protcons::Vector{Float64},outdir::Str
     # writedlm(ofl,outdata)
     # close(ofl)
 
-    return areas,errar,linfitres
+    return areas,errar,linfitres,resstdev
 end
 
 ###########################################################

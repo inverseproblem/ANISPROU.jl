@@ -15,27 +15,65 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
 
     
     lstlines = [selectstatpts..., selectinflpts...]
-
     nlines = length(lstlines)
+    
     intercept = Vector{Float64}(undef,nlines)
     angcoe = Vector{Float64}(undef,nlines)
+
+    # variance of angcoe and intercept
+    # varangcoe = Vector{Float64}(undef,nlines)
+    # varintercept = Vector{Float64}(undef,nlines)
+
+    # residuals standard deviation
+    resstdev = Vector{Float64}(undef,nlines)
+
     for i=1:nlines
-        angcoe[i],intercept[i] = lssqregr(lstlines[i])
+        # angcoe[i],intercept[i] = lssqregr(lstlines[i])
+
+        # # setup covariance matrices
+        # Cd = Diagonal(stdinputdata.^2 .*ones(size(lstlines[i],1)))
+
+        # perform least squares regression
+        angcoe[i],intercept[i],resstdev[i] = lssqregr(lstlines[i]) #,Cd)
     end
     
     ##
-    ## totSDS = freeSDS + Nbound * protc
+    ## totSDS = Nbound * protc + freeSDS 
     ##
+    Nbound = angcoe
+    freeSDS = intercept
+    
+    # # standard dev. from variance
+    # stdNbound = sqrt.(varangcoe)
+    # stdfreeSDS = sqrt.(varintercept)
+   
+    # @show Nbound
+    # @show freeSDS
+    # @show resstdev
+
+    ## Old stuff...
     # y = angcoe.*x .+ intercept
     # x = (-intercept .+ 0)./angcoe
-    Nbound = 1.0./angcoe
-    freeSDS = -intercept./angcoe
+    # Nbound = 1.0./angcoe
+    # freeSDS = -intercept./angcoe
+    
+    # ## Propagation of uncertainty on Nbound using
+    # ##  the formula  δy = | dy/dx | δx
+    # stdNbound = (1.0 ./ angcoe.^2) .* stdangcoe
 
+    # ## Propagation of uncertainty on freeSDS using
+    # ##  the formula  δz = sqrt( (|dz/dx| δx)^2 + (|dz/dy| δy)^2 )
+    # ## [ freeSDS = -intercept./angcoe  ]
+    # stdfreeSDS = sqrt.( ((intercept/angcoe.^2).*stdangcoe)^2 .+
+    #                     ((-1.0./intercept).*stdintercept).^2 )
+    
     ## Sort in ascending order of SDS concentration
     idxsort = sortperm(freeSDS)
     freeSDS = freeSDS[idxsort] 
-    Nbound  = Nbound[idxsort] 
-
+    Nbound  = Nbound[idxsort]
+    resstdev = resstdev[idxsort]
+    # stdNbound = stdNbound[idxsort]
+    # stdfreeSDS = stdfreeSDS[idxsort]
 
     ##-------------------------------------------------------
     # save in JLD2 format
@@ -49,20 +87,24 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
         fl["selectedinflpts"] = selectinflpts
         fl["freeSDS"] = freeSDS
         fl["Nbound"] = Nbound
+        fl["resstdev"] = resstdev
+        # fl["stdfreeSDS"] = stdfreeSDS
+        # fl["stdevNbound"] = stdNbound
+        # fl["stdinputdata"] = stdinputdata
     end
 
     ##-------------------------------------------------------
     # save in plain text format
-    outdata = [freeSDS Nbound]
+    outdata = [freeSDS Nbound resstdev]
     outfile2 = joinpath(outdir,protein*"_ITCbindingisoth.dat")
     println("Saving results in text file to $outfile2\n")
-    header = "# Binding isotherm results for protein $protein, columns: freeSDS and Nbound"
+    header = "# Binding isotherm results for protein $protein, columns: freeSDS, Nbound, stand_dev_residuals"
     ofl = open(outfile2,"w")
     writedlm(ofl,[header])
     writedlm(ofl,outdata)
     close(ofl)
 
-    return freeSDS,Nbound
+    return freeSDS,Nbound,resstdev #,stdfreeSDS,stdNbound
 end
 
 ####################################################
