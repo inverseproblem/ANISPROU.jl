@@ -25,7 +25,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
     # varintercept = Vector{Float64}(undef,nlines)
 
     # residuals standard deviation
-    resstddev = Vector{Float64}(undef,nlines)
+    resstdev = Vector{Float64}(undef,nlines)
 
     for i=1:nlines
         # angcoe[i],intercept[i] = lssqregr(lstlines[i])
@@ -34,7 +34,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
         # Cd = Diagonal(stdinputdata.^2 .*ones(size(lstlines[i],1)))
 
         # perform least squares regression
-        angcoe[i],intercept[i],resstddev[i] = lssqregr(lstlines[i]) #,Cd)
+        angcoe[i],intercept[i],resstdev[i] = lssqregr(lstlines[i]) #,Cd)
     end
     
     ##
@@ -47,9 +47,9 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
     # stdNbound = sqrt.(varangcoe)
     # stdfreeSDS = sqrt.(varintercept)
    
-    @show Nbound
-    @show freeSDS
-    @show resstddev
+    # @show Nbound
+    # @show freeSDS
+    # @show resstdev
 
     ## Old stuff...
     # y = angcoe.*x .+ intercept
@@ -71,7 +71,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
     idxsort = sortperm(freeSDS)
     freeSDS = freeSDS[idxsort] 
     Nbound  = Nbound[idxsort]
-    resstddev = resstddev[idxsort]
+    resstdev = resstdev[idxsort]
     # stdNbound = stdNbound[idxsort]
     # stdfreeSDS = stdfreeSDS[idxsort]
 
@@ -87,7 +87,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
         fl["selectedinflpts"] = selectinflpts
         fl["freeSDS"] = freeSDS
         fl["Nbound"] = Nbound
-        fl["resstddev"] = resstddev
+        fl["resstdev"] = resstdev
         # fl["stdfreeSDS"] = stdfreeSDS
         # fl["stdevNbound"] = stdNbound
         # fl["stdinputdata"] = stdinputdata
@@ -95,7 +95,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
 
     ##-------------------------------------------------------
     # save in plain text format
-    outdata = [freeSDS Nbound resstddev]
+    outdata = [freeSDS Nbound resstdev]
     outfile2 = joinpath(outdir,protein*"_ITCbindingisoth.dat")
     println("Saving results in text file to $outfile2\n")
     header = "# Binding isotherm results for protein $protein, columns: freeSDS, Nbound, stand_dev_residuals"
@@ -104,7 +104,7 @@ function calcfreeSDSNbound(protcons::Vector{<:Real},
     writedlm(ofl,outdata)
     close(ofl)
 
-    return freeSDS,Nbound,resstddev #,stdfreeSDS,stdNbound
+    return freeSDS,Nbound,resstdev #,stdfreeSDS,stdNbound
 end
 
 ####################################################

@@ -26,8 +26,12 @@ function lssqregr(points::Array{<:Real,2})
     # residuals
     r = (G * mpost) .- dobs
     sse = sum(r.^2)
-    resstderr = sqrt(sse/(length(dobs)-2))
-
+    if length(r)>2
+        resstderr = sqrt(sse/(length(dobs)-2))
+    else
+        resstderr = sqrt(sse/(length(dobs)))
+    end
+    
     return angcoe,intercept,resstderr
 end
 
@@ -72,7 +76,11 @@ end
 #     # residuals
 #     r = (G * mpost) .- dobs
 #     sse = sum(r.^2)
-#     resstderr = sqrt(sse/(length(dobs)-2))
+#     if length(r)>2
+#         resstderr = sqrt(sse/(length(dobs)-2))
+#     else
+#         resstderr = sqrt(sse/(length(dobs)))
+#     end
     
 
 #     @show G

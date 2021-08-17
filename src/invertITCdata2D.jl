@@ -242,6 +242,7 @@ function misfareaenth(betpar::ScaledBeta2DParams,mcur2d::Matrix{<:Real})
         
         @assert all(abeta.<=qtpts.<=bbeta)
         # if !(abeta<=mode<=bbeta)
+        #     @show mcur2d
         #     betami = BetaMix2D(betpar,mcur2d,"boh")
         #     plotparamlines(betami)
         # end
@@ -436,7 +437,7 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
 - `outdir`: output directory to save results
 - `applynonlinconstr`=false: optional parameter determining whether to use or 
                              not the nonlinear constraints
-- `constrarea`=0.0: a positive real number defining lower and upper constraints [-constrarea,constrarea] 
+- `constrarea`=Inf: a positive real number defining lower and upper constraints [-constrarea,constrarea] 
                    for the value of area (enthalpy) at protein concentration equal to zero
 
 # Returns 
@@ -448,7 +449,7 @@ It also saves all the setup of the problem and a set of parameters to an HDF5 fi
 function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{<:Real},
                       mstart::Matrix{<:Real},lowconstr::Matrix{<:Real},upconstr::Matrix{<:Real},
                       outdir::String;
-                      applynonlinconstr::Bool=false,constrarea::Real=0.0)
+                      applynonlinconstr::Bool=false,constrarea::Real=Inf)
 
     # References
 
@@ -928,7 +929,7 @@ function solveinvprob(betpar::ScaledBeta2DParams,dobs::ITCObsData,invCd::Matrix{
     println(result)
 
     ## inverse Hessian
-    @show size(result.trace[end].metadata["h(x)"])
+    #@show size(result.trace[end].metadata["h(x)"])
     hessian = result.trace[end].metadata["h(x)"]
 
 
