@@ -25,7 +25,8 @@ using LinearAlgebra
 using Roots
 using Cubature,QuadGK
 using Optim
-using PyPlot 
+using PyPlot
+PyPlot.rc("font", family="serif", size=12)
 using WriteVTK
 using DocStringExtensions
 using Requires

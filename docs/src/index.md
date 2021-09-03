@@ -45,11 +45,11 @@ However, the user can read/obtain the data in any other way, as long as it is po
 
 If using the [`readallexperiments`](@ref) function, the directory containing the data set and the file names must have a certain structure in order for the function reading the data to work. Such structure should be like the following example, where the directory name is the protein name `IM7`:
 ```
-100uMIM7highSDS_2.DAT
-125uMIM7highSDS_1.DAT
-25uMIM7highSDS_5.DAT
-50uMIM7highSDS_4.DAT
-75uMIM7highSDS_3.DAT
+  050_IM7.DAT
+  075_IM7.DAT
+  100_IM7.DAT
+  125_IM7.DAT
+  150_IM7.DAT
 ```
 where the file names must follow the following rules:
 - they must end with ".DAT" or ".dat"
@@ -241,11 +241,14 @@ nothing # hide
 
 In case the package `Makie` is installed, it is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
 ```@example procITC
-using Makie
-plotsurface3D(dobs,betamix)
-scene=plotsurface3D(dobs,betamix,displayscene=false) # hide
-Makie.save("figs/surfaceplot.png", scene) # hide
+using GLMakie
+plotsurface3D(dobs,betamix,markersize=3500)
 nothing # hide
+```
+```@setup procITC
+fig=plotsurface3D(dobs,betamix,markersize=3500,displayfig=false);
+Makie.save("figs/surfaceplot.png", fig) 
+nothing 
 ```
 ![](figs/surfaceplot.png)
 
@@ -279,65 +282,56 @@ The next step involves selecting a subset of the found points to construct the b
 ```@example procITC
 # ===========================================
 # Selection of local minima and maxima
-locminmax = [] ##Vector{Array{<:Real,2}}(undef,0)
+selectstatpts = Vector{Array{<:Real,2}}(undef,0)
 
-push!(locminmax, [ statpts[1][2] protcon[1];
-                   statpts[2][2] protcon[2];
-                   statpts[3][2] protcon[3];
-                   statpts[4][2] protcon[4] ] )
+push!(selectstatpts, [ statpts[1][2] protcon[1];
+	                   statpts[2][2] protcon[2];
+                       statpts[3][2] protcon[3];
+                       statpts[4][2] protcon[4] ] )
 
-push!(locminmax, [ statpts[2][3] protcon[2];
-                   statpts[3][3] protcon[3];
-                   statpts[4][3] protcon[4] ] )
+push!(selectstatpts, [ statpts[2][3] protcon[2];
+                       statpts[3][3] protcon[3];
+                       statpts[4][3] protcon[4] ] )
 
-push!(locminmax, [ statpts[2][4] protcon[2];
-                   statpts[3][4] protcon[3];
-                   statpts[4][4] protcon[4] ] )
-
-push!(locminmax, [ statpts[1][5] protcon[1];
-                   statpts[2][5] protcon[2];
-                   statpts[3][5] protcon[3];
-                   statpts[4][5] protcon[4] ] )
+push!(selectstatpts, [ statpts[1][3] protcon[1];
+                       statpts[2][5] protcon[2];
+                       statpts[3][5] protcon[3];
+                       statpts[4][5] protcon[4] ] )
 					   
-push!(locminmax, [ statpts[1][6] protcon[1];
-                   statpts[2][6] protcon[2];
-                   statpts[3][6] protcon[3];
-                   statpts[4][6] protcon[4] ] )
+push!(selectstatpts, [ statpts[1][4] protcon[1];
+                       statpts[2][6] protcon[2];
+                       statpts[3][6] protcon[3];
+                       statpts[4][6] protcon[4] ] )
 
 
 # ===========================================
 # Selection of inflection points
-inflectionpts = [] ##Vector{Array{<:Real,2}}(undef,0)
+selectinflpts = Vector{Array{<:Real,2}}(undef,0)
     
-push!(inflectionpts, [ inflpts[1][2] protcon[1];
+push!(selectinflpts, [ inflpts[1][1] protcon[1];
                        inflpts[2][2] protcon[2];
                        inflpts[3][2] protcon[3];
-                       inflpts[4][2] protcon[4] ] )
+                       inflpts[4][1] protcon[4] ] )
 
-push!(inflectionpts, [ inflpts[1][3] protcon[1];
+push!(selectinflpts, [ inflpts[1][2] protcon[1];
                        inflpts[2][3] protcon[2];
                        inflpts[3][3] protcon[3];
-                       inflpts[4][3] protcon[4] ] )
+                       inflpts[4][2] protcon[4] ] )
 
-push!(inflectionpts, [ inflpts[1][4] protcon[1];
-                       inflpts[2][4] protcon[2];
-                       inflpts[3][4] protcon[3];
-                       inflpts[4][4] protcon[4] ] )
-
-push!(inflectionpts, [ inflpts[1][5] protcon[1];
+push!(selectinflpts, [ inflpts[1][4] protcon[1];
                        inflpts[2][5] protcon[2];
                        inflpts[3][5] protcon[3];
-                       inflpts[4][5] protcon[4] ] )
+                       inflpts[4][4] protcon[4] ] )
 
-push!(inflectionpts, [ inflpts[1][6] protcon[1];
+push!(selectinflpts, [ inflpts[1][5] protcon[1];
                        inflpts[2][6] protcon[2];
                        inflpts[3][6] protcon[3];
-                       inflpts[4][6] protcon[4] ] )
+                       inflpts[4][5] protcon[4] ] )
 
-push!(inflectionpts, [ inflpts[1][7] protcon[1];
-                       inflpts[2][7] protcon[2];
-                       inflpts[3][7] protcon[3];
-                       inflpts[4][7] protcon[4] ] )
+#push!(selectinflpts, [ inflpts[1][7] protcon[1];
+#                       inflpts[2][7] protcon[2];
+#                       inflpts[3][7] protcon[3];
+#                       inflpts[4][7] protcon[4] ] )
 
 nothing # hide
 ```
@@ -345,14 +339,15 @@ nothing # hide
 Once we have a set of set of features we can estimate the best fitting straight lines for each set by performing a least squares linear regression with [`calcfreeSDSNbound`](@ref). 
 ```@example procITC
 # find the straight line by least squares
-lstlines = [locminmax..., inflectionpts...] # list of set of points
-freeSDS,Nbound = calcfreeSDSNbound(lstlines) # do the linear regression
+freeSDS,Nbound,resstdev = calcfreeSDSNbound(protcon,statpts,inflpts,selectstatpts,selectinflpts,outdir,dobs.protein) # do the linear regression
 nothing # hide
 ```
+`resstedev` is a vector containing the standard deviation of the residuals of the regression for each point of the binding isotherm.
+
 Finally, the resulting binding isotherm is plotted with the following:
 ```@example procITC 
 outdir = "figs"
-plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir)
+plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,outdir,resstdev=resstdev)
 savefig("plotbindisoth.svg") # hide
 nothing # hide
 ```
@@ -372,12 +367,13 @@ It is also possible to calculate the area for each Beta component for a set of d
 ```@example procITC
 N = 15
 protcons = collect(LinRange(0.0,0.14,N)) # set of protein concentrations
-areas,erras = areasvsprotcon(betamix,protcons)
-plotareavsprotcon(protcons,areas) # plot area as a function of protein concentration
+areas,erras,linfitres,resstdev = areasvsprotcon(betamix,protcons,outdir,protein)
+plotareavsprotcon(protein,protcons,areas,linfitres,outdir) # plot area as a function of protein concentration
 savefig("plotsetareas.svg") # hide
 nothing # hide
 ```	
 ![](plotsetareas.svg)
+
 Alternatively, a function to plot the value of model parameters and areas as a function of protein concentration is available, [`plotparamlines`](@ref)
 ```@example procITC
 plotparamlines(betamix,protcons,areas)

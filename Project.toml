@@ -1,7 +1,7 @@
 name = "ANISPROU"
 uuid = "08cfc508-0e4e-466d-8a2a-c6d8847fb4a3"
 authors = ["Andrea Zunino <inverseproblem@users.noreply.github.com>"]
-version = "0.7.0"
+version = "0.8.0"
 
 [deps]
 Cubature = "667455a9-e2ce-5579-9412-b964f529a492"

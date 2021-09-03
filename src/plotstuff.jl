@@ -448,6 +448,8 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,ou
         resstdevbi = [0.0,resstdev...]
         scatter(xbi,ybi,c=resstdevbi,cmap=PyPlot.cm_get_cmap("rainbow"))
         colorbar(label="residuals standard dev.")
+    else
+        scatter(xbi,ybi)
     end
     plot(xbi,ybi,"-")
     xlabel("free SDS concentration [mM]")
@@ -574,8 +576,8 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir;
-                           firstidpar=1)
+function plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir )
+
     ncomp = size(areas,2)
     figure()
  

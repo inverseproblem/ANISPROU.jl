@@ -1,13 +1,14 @@
 
-#using Makie,AbstractPlotting
 
 """
 $(TYPEDSIGNATURES)
 
 Plot the a 3D surface from the Beta mix together measured data as circles.
 """
-function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.px,
-                       displayscene=true, ymin=nothing,ymax=nothing)
+function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=3500,
+                       displayfig=true, ymin=nothing,ymax=nothing)
+
+    # markersize=350Makie.px
 
     println("\nPlotting 3D surface from Beta mix and measured data as circles.")
     println(" Scaling factors are $yscal for [$(dobs.protein)] and $zscal for enthalpy.")
@@ -40,36 +41,24 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=350Makie.
     yobs = dobs.sdsprotcon[:,2]
     zobs = dobs.enthalpy
 
-    # yscal = 110
-    # zscal = 0.01
 
     ## Makie plot    
-    scene = Makie.Scene(resolution = (1000, 1000))
-    Makie.surface!(scene,xv,yscal*yv,zscal*dcalc,alpha=1.0,colormap=:rainbow1)
-    
-    # lim = FRect3D((xmin,ymin,zmin),(xmax,ymax,zmax))
-    # Makie.surface!(scene,xv,yv,dcalc,limits=lim)
+    fig = Makie.Figure(resolution = (1000, 800))
+    ax1 = Makie.Axis3(fig[1,1]) # Axis3 -> 3D
 
-    # ,axis=(showgrid=false,)) #,colormap=Reverse(:amp))
+    Makie.surface!(ax1,xv,yscal*yv,zscal*dcalc,alpha=1.0,colormap=:rainbow1)
 
-    # julia> scatter(rand(10), axis = (showgrid = false,))
-    # julia> scatter(rand(10), axis = (showgrid = (false,true),))
-    # julia> scatter(rand(10), axis = (showticks = (false,true),))
-    # julia> scatter(rand(10), axis = (showticks = false,))
+    Makie.scatter!(ax1,xobs,yscal*yobs,zscal*zobs,color=:black,markersize=markersize)
 
-    #Makie.wireframe!(scene,xv,yscal*yv,zscal*dcalc,overdraw = true, transparency = true, color = (:black, 0.1))
-    Makie.scatter!(scene,xobs,yscal*yobs,zscal*zobs,color=:black,markersize=markersize)
+    ax1.xlabel = "[SDS]"
+    ax1.ylabel = "[$(dobs.protein)]x$yscal"
+    ax1.zlabel = "Enthalpy x $zscal"
 
-    axis = scene[Makie.Axis] # get axis
-    axis[:names, :axisnames] = ("[SDS]","[$(dobs.protein)]x$yscal","Enthalpy x $zscal")
-
-    #Makie.scale!(scene,1,yscal,zscal)
-    Makie.center!(scene)
-    if displayscene
-        Makie.display(scene)
+    Makie.center!(fig.scene)
+    if displayfig
+        display(fig)
     end
-    #Makie.save("surfaceplot.png", scene)
-
-    return scene
+    
+    return fig
 end
 
