@@ -437,8 +437,7 @@ Solve the inverse problem, i.e., fit the measured enthalpy data,
 - `outdir`: output directory to save results
 - `applynonlinconstr`=false: optional parameter determining whether to use or 
                              not the nonlinear constraints
-- `constrarea`=Inf: a positive real number defining lower and upper constraints [-constrarea,constrarea] 
-                   for the value of area (enthalpy) at protein concentration equal to zero
+- `constrarea`=Inf: a positive real number defining the upper constraint for the value of area (enthalpy) at protein concentration equal to zero
 
 # Returns 
 

@@ -293,16 +293,19 @@ push!(selectstatpts, [ statpts[2][3] protcon[2];
                        statpts[3][3] protcon[3];
                        statpts[4][3] protcon[4] ] )
 
+#push!(selectstatpts, [ statpts[2][4] protcon[2];
+#                       statpts[3][4] protcon[3];
+#                       statpts[4][4] protcon[4] ] )
+
 push!(selectstatpts, [ statpts[1][3] protcon[1];
                        statpts[2][5] protcon[2];
                        statpts[3][5] protcon[3];
                        statpts[4][5] protcon[4] ] )
-					   
+
 push!(selectstatpts, [ statpts[1][4] protcon[1];
                        statpts[2][6] protcon[2];
                        statpts[3][6] protcon[3];
                        statpts[4][6] protcon[4] ] )
-
 
 # ===========================================
 # Selection of inflection points
@@ -311,27 +314,22 @@ selectinflpts = Vector{Array{<:Real,2}}(undef,0)
 push!(selectinflpts, [ inflpts[1][1] protcon[1];
                        inflpts[2][2] protcon[2];
                        inflpts[3][2] protcon[3];
-                       inflpts[4][1] protcon[4] ] )
+                       inflpts[4][2] protcon[4] ] )
 
 push!(selectinflpts, [ inflpts[1][2] protcon[1];
                        inflpts[2][3] protcon[2];
                        inflpts[3][3] protcon[3];
-                       inflpts[4][2] protcon[4] ] )
+                       inflpts[4][3] protcon[4] ] )
+
+#push!(selectinflpts, [ inflpts[1][3] protcon[1];
+#                       inflpts[2][4] protcon[2];
+#                       inflpts[3][4] protcon[3];
+#                       inflpts[4][4] protcon[4] ] )
 
 push!(selectinflpts, [ inflpts[1][4] protcon[1];
                        inflpts[2][5] protcon[2];
                        inflpts[3][5] protcon[3];
-                       inflpts[4][4] protcon[4] ] )
-
-push!(selectinflpts, [ inflpts[1][5] protcon[1];
-                       inflpts[2][6] protcon[2];
-                       inflpts[3][6] protcon[3];
                        inflpts[4][5] protcon[4] ] )
-
-#push!(selectinflpts, [ inflpts[1][7] protcon[1];
-#                       inflpts[2][7] protcon[2];
-#                       inflpts[3][7] protcon[3];
-#                       inflpts[4][7] protcon[4] ] )
 
 nothing # hide
 ```
