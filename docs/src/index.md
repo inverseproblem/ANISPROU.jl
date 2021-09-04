@@ -239,7 +239,7 @@ nothing # hide
 
 #### Plot the 3D surface vs. observed data
 
-In case the package `Makie` is installed, it is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
+It is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
 ```@example procITC
 using GLMakie
 plotsurface3D(dobs,betamix,markersize=3500)
@@ -292,10 +292,6 @@ push!(selectstatpts, [ statpts[1][2] protcon[1];
 push!(selectstatpts, [ statpts[2][3] protcon[2];
                        statpts[3][3] protcon[3];
                        statpts[4][3] protcon[4] ] )
-
-#push!(selectstatpts, [ statpts[2][4] protcon[2];
-#                       statpts[3][4] protcon[3];
-#                       statpts[4][4] protcon[4] ] )
 
 push!(selectstatpts, [ statpts[1][3] protcon[1];
                        statpts[2][5] protcon[2];

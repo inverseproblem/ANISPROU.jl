@@ -30,6 +30,8 @@ PyPlot.rc("font", family="serif", size=12)
 using WriteVTK
 using DocStringExtensions
 using Requires
+using GLMakie
+
 
 export ScaledBeta2DParams,BetaMix2D,ITCObsData
 export readallexperiments
@@ -52,15 +54,18 @@ include("bindingisotherm.jl")
 include("plotstuff.jl")
 
 # 3D plotting
-function __init__()
-    @require Makie="ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"  begin
-        # @require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
-        import .Makie
-        include("plot3d.jl")
-        export plotsurface3D
-       # end
-    end
-end
+include("plot3d.jl")
+
+# # 3D plotting
+# function __init__()
+#     @require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a"  begin
+#         # @require AbstractPlotting="537997a7-5e4e-5d89-9595-2241ea00577e" begin
+#         import .GLMakie
+#         include("plot3d.jl")
+#         export plotsurface3D
+#        # end
+#     end
+# end
 
 
 
