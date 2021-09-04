@@ -1,4 +1,4 @@
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://inverseproblem.github.io/ANISPROU.jl/stable)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://inverseproblem.github.io/ANISPROU.jl/dev)
 [CI](https://github.com/inverseproblem/ANISPROU.jl/workflows/CI/badge.svg)
 
 # ANISPROU
