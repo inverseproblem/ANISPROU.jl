@@ -1,5 +1,5 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://inverseproblem.github.io/ANISPROU.jl/dev)
-[CI](https://github.com/inverseproblem/ANISPROU.jl/workflows/CI/badge.svg)
+![CI](https://github.com/inverseproblem/ANISPROU.jl/workflows/CI/badge.svg)
 
 # ANISPROU
 Analysis of isothermal titration calorimetry (ITC) data on sodium dodecyl sulphate (SDS) mediated protein unfolding.
