@@ -33,6 +33,7 @@ jobs:
         env:
           PYTHON: ""
         run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+             julia --project=docs/ -e 'using PyPlot'
       - name: Build and deploy
         env:
           PYTHON: ""
