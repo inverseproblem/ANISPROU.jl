@@ -12,15 +12,15 @@ function plotobsdata(dobs)
     procon = dobs.sdsprotcon[:,2]
     protein = dobs.protein
 
-    figure(figsize=(11,6))
-    title("$protein observed data")
+    PyPlot.figure(figsize=(11,6))
+    PyPlot.title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")    
+    PyPlot.scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")    
    
-    tight_layout()
+    PyPlot.tight_layout()
     return
 end
 
@@ -43,28 +43,28 @@ function plotinitialguess(betpar,dobs,mstart)
     #ncomp = size(mstart,2) #div(lenm,nummodparam)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
-    figure(figsize=(12,5))
+    PyPlot.figure(figsize=(12,5))
     #suptitle("Observed data and initial guess")
 
-    subplot(121)
-    title("$protein observed data")
+    PyPlot.subplot(121)
+    PyPlot.title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")    
+    PyPlot.scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")    
     plotmodelines(betpar,mstart,"start. m.")
 
-    subplot(122)
-    title("Calculated data from starting model")
+    PyPlot.subplot(122)
+    PyPlot.title("Calculated data from starting model")
     #tricontour(sdscon,procon,dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
+    PyPlot.scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")
     plotmodelines(betpar,mstart,"start. m.")
    
-    tight_layout()
+    PyPlot.tight_layout()
     return
 end
 
@@ -92,62 +92,62 @@ function plotresults(betamix,dobs,mstart,outdir)
     ym = LinRange(betpar.ymin,betpar.ymax,40)
 
 
-    figure(figsize=(14,7))
-    subplot(231)
-    title("$protein observed data")
+    PyPlot.figure(figsize=(14,7))
+    PyPlot.subplot(231)
+    PyPlot.title("$protein observed data")
     #tricontour(sdscon,procon,dobs,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
+    PyPlot.scatter(sdscon,procon,c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")
     plotmodelines(betpar,mstart,"start. m.")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     #plotmodelines(betpar,mpost,"mpost")
     
-    subplot(232)
-    title("Calculated data from starting model")
+    PyPlot.subplot(232)
+    PyPlot.title("Calculated data from starting model")
     #tricontour(sdscon,procon,dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
+    PyPlot.scatter(sdscon,procon,c=dcalcstart,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")
     plotmodelines(betpar,mstart,"start. m.")
 
-    subplot(233)
-    title("Model parameters")
-    plot(vec(mstart),".-",label="starting model")
-    plot(vec(mpost),".-",label="posterior model")
-    legend()
+    PyPlot.subplot(233)
+    PyPlot.title("Model parameters")
+    PyPlot.plot(vec(mstart),".-",label="starting model")
+    PyPlot.plot(vec(mpost),".-",label="posterior model")
+    PyPlot.legend()
 
-    subplot(234)
-    title("Calculated data from posterior model")
+    PyPlot.subplot(234)
+    PyPlot.title("Calculated data from posterior model")
     #tricontour(sdscon,procon,dcalccur,cmap=PyPlot.get_cmap("rainbow"))
-    scatter(sdscon,procon,c=dcalccur,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
+    PyPlot.scatter(sdscon,procon,c=dcalccur,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")
     plotmodelines(betpar,mpost,"post. m.")    
     
     
-    subplot(235)
-    title("Calculated minus observed data")
+    PyPlot.subplot(235)
+    PyPlot.title("Calculated minus observed data")
     #tricontour(sdscon,procon,dcalccur,cmap=PyPlot.get_cmap("rainbow"))
     dcmo = dcalccur-dobs.enthalpy
     vmax = maximum(abs.(dcmo))
-    scatter(sdscon,procon,c=dcmo,vmin=-vmax,vmax=vmax,cmap=PyPlot.get_cmap("RdBu"))
-    colorbar(label="ΔEnthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")
+    PyPlot.scatter(sdscon,procon,c=dcmo,vmin=-vmax,vmax=vmax,cmap=PyPlot.get_cmap("RdBu"))
+    PyPlot.colorbar(label="ΔEnthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     
-    subplot(236)
-    title("Calculated vs. observed data")
-    plot(dcalcstart,"--",label="calc. data from start. mod.",linewidth=0.8)
-    plot(dobs.enthalpy,"-k",label="observed data")
-    plot(dcalccur,"-r",label="calc. data from post. mod.")
-    legend()
+    PyPlot.subplot(236)
+    PyPlot.title("Calculated vs. observed data")
+    PyPlot.plot(dcalcstart,"--",label="calc. data from start. mod.",linewidth=0.8)
+    PyPlot.plot(dobs.enthalpy,"-k",label="observed data")
+    PyPlot.plot(dcalccur,"-r",label="calc. data from post. mod.")
+    PyPlot.legend()
 
     # subplot(235)
     # title("Misfit")
@@ -155,14 +155,14 @@ function plotresults(betamix,dobs,mstart,outdir)
     # xlabel("Iteration number")
     # ylabel("misfit")
 
-    tight_layout()
+    PyPlot.tight_layout()
     
     try
         mkdir(outdir)
     catch
         nothing
     end
-    savefig(joinpath(outdir,protein*"_results.pdf"))
+    PyPlot.savefig(joinpath(outdir,protein*"_results.pdf"))
     return nothing
 end
 
@@ -185,13 +185,13 @@ function plotmodelines(betpar,mcur,modname; firstidpar=1)
         i1 = firstidpar
         xm = (mcur[i2,i].-mcur[i1,i])./(y2.-y1).*(ym.-y1) .+ mcur[i1,i]
         if i==ncomp
-            plot(xm,ym,"-k",linewidth=0.6,label="mode $modname")
+            PyPlot.plot(xm,ym,"-k",linewidth=0.6,label="mode $modname")
         else
-            plot(xm,ym,"-k",linewidth=0.6)
+            PyPlot.plot(xm,ym,"-k",linewidth=0.6)
         end
-        plot(xm[[1,end]],ym[[1,end]],"ok",markersize=2.0)
+        PyPlot.plot(xm[[1,end]],ym[[1,end]],"ok",markersize=2.0)
     end
-    legend(loc="lower right")
+    PyPlot.legend(loc="lower right")
     # xlim([-2,betpar.b])
     # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     return
@@ -224,22 +224,22 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
     parname = ["Mode","Confidence par.","Amplitude"]
 
 
-    figure(figsize=(12,9))
+    PyPlot.figure(figsize=(12,9))
     ylab = ["SDS concentration [mM]",
             "Confidence parameter",
             "Enthalpy"]
     
     for ip=1:3
 
-        subplot(2,2,ip)
-        title("$(parname[ip])")
-        xlabel("Protein concentration [mM]")
-        axvline(betpar.ymin,color="black")
-        axvline(betpar.ymax,color="black")
+        PyPlot.subplot(2,2,ip)
+        PyPlot.title("$(parname[ip])")
+        PyPlot.xlabel("Protein concentration [mM]")
+        PyPlot.axvline(betpar.ymin,color="black")
+        PyPlot.axvline(betpar.ymax,color="black")
 
         if ip==1
-            axhline(betpar.a,color="black")
-            axhline(betpar.b,color="black")
+            PyPlot.axhline(betpar.a,color="black")
+            PyPlot.axhline(betpar.b,color="black")
         end
 
         for i=1:ncomp
@@ -276,29 +276,29 @@ function plotparamlines(betamix,protcons=nothing,areas=nothing)
 
             end
 
-            plot(xm,ym,"-",linewidth=1,label="comp. $i")
-            plot(xm[[1,end]],ym[[1,end]],".k",markersize=5.0)
-            ylabel(ylab[ip])
+            PyPlot.plot(xm,ym,"-",linewidth=1,label="comp. $i")
+            PyPlot.plot(xm[[1,end]],ym[[1,end]],".k",markersize=5.0)
+            PyPlot.ylabel(ylab[ip])
 
         end
-        legend()
+        PyPlot.legend()
         
         # xlim([-2,betpar.b])
         # ylim([0.9*betpar.ymin,1.05*betpar.ymax])
     end
 
     if areas!=nothing
-        subplot(224)
-        title("Areas of single components")
+        PyPlot.subplot(224)
+        PyPlot.title("Areas of single components")
         for i=1:ncomp
-            plot(protcons,areas[:,i],"o-",label="Beta comp. #$i")
+            PyPlot.plot(protcons,areas[:,i],"o-",label="Beta comp. #$i")
         end
-        legend()
-        xlabel("Protein concentration [mM]")
-        ylabel("Area [kJ]")
+        PyPlot.legend()
+        PyPlot.xlabel("Protein concentration [mM]")
+        PyPlot.ylabel("Area [kJ]")
     end
 
-    tight_layout()
+    PyPlot.tight_layout()
 
     return
 end
@@ -403,25 +403,25 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,ou
     x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
 
     ##-------------------------------------
-    figure(figsize=(12,10))
+    PyPlot.figure(figsize=(12,10))
     
-    subplot(211)
-    title("Protein $protein: binding isotherm from stationary points of Beta mix")
-    scatter(dobs.sdsprotcon[:,1],dobs.sdsprotcon[:,2],c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
-    colorbar(label="Enthalpy [kJ/mol]")
-    xlabel("SDS concentration [mM]")
-    ylabel("Protein concentration [mM]")    
+    PyPlot.subplot(211)
+    PyPlot.title("Protein $protein: binding isotherm from stationary points of Beta mix")
+    PyPlot.scatter(dobs.sdsprotcon[:,1],dobs.sdsprotcon[:,2],c=dobs.enthalpy,cmap=PyPlot.get_cmap("rainbow"))
+    PyPlot.colorbar(label="Enthalpy [kJ/mol]")
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Protein concentration [mM]")    
 
     ny = length(protcon)
     for i in 1:ny
         for z in 1:length(statpts[i])
-            plot(statpts[i][z],protcon[i],"or")
-            text(statpts[i][z],protcon[i],string(z),color="red")
+            PyPlot.plot(statpts[i][z],protcon[i],"or")
+            PyPlot.text(statpts[i][z],protcon[i],string(z),color="red")
         end
         
         for z in 1:length(inflpts[i])
-            plot(inflpts[i][z],protcon[i],"ob")
-            text(inflpts[i][z],protcon[i],string(z),color="blue")
+            PyPlot.plot(inflpts[i][z],protcon[i],"ob")
+            PyPlot.text(inflpts[i][z],protcon[i],string(z),color="blue")
         end
     end
 
@@ -431,37 +431,37 @@ function plotbindisotherm(betamix,protcon,dobs,statpts,inflpts,freeSDS,Nbound,ou
         # y = angcoe.*x .+ intercept
         # x = (-intercept .+ 0)./angcoe
         ypl = (1.0/Nbound[i]).*x .+ (-freeSDS[i]/Nbound[i])
-        plot(x,ypl,"-k",linewidth=0.5)
+        PyPlot.plot(x,ypl,"-k",linewidth=0.5)
     end
 
     # xlim([betamix.betpar.a,betamix.betpar.b])
-    ylim([0.92*betamix.betpar.ymin,1.05betamix.betpar.ymax])
+    PyPlot.ylim([0.92*betamix.betpar.ymin,1.05betamix.betpar.ymax])
 
     ##
     ## totSDS = freeSDS + Nbound * protc
     ##
-    subplot(212)
-    title("Binding isotherm for protein $protein")
+    PyPlot.subplot(212)
+    PyPlot.title("Binding isotherm for protein $protein")
     xbi = [0.0, freeSDS...]
     ybi = [0.0, Nbound...]
     if resstdev!=nothing
         resstdevbi = [0.0,resstdev...]
-        scatter(xbi,ybi,c=resstdevbi,cmap=PyPlot.cm_get_cmap("rainbow"))
-        colorbar(label="residuals standard dev.")
+        PyPlot.scatter(xbi,ybi,c=resstdevbi,cmap=PyPlot.cm_get_cmap("rainbow"))
+        PyPlot.colorbar(label="residuals standard dev.")
     else
-        scatter(xbi,ybi)
+        PyPlot.scatter(xbi,ybi)
     end
-    plot(xbi,ybi,"-")
-    xlabel("free SDS concentration [mM]")
-    ylabel("Nbound")
+    PyPlot.plot(xbi,ybi,"-")
+    PyPlot.xlabel("free SDS concentration [mM]")
+    PyPlot.ylabel("Nbound")
 
-    tight_layout()
+    PyPlot.tight_layout()
     try
         mkdir(outdir)
     catch
         nothing
     end
-    savefig(joinpath(outdir,protein*"_bind-isoth_betamix.pdf"))
+    PyPlot.savefig(joinpath(outdir,protein*"_bind-isoth_betamix.pdf"))
     return
 end
 
@@ -485,36 +485,36 @@ function plotfoundfeatures(betamix,protcon,statpts,inflpts,outdir)
         return out[1] 
     end
 
-    figure(figsize=(12,6))
-    title("Protein $protein: stationary and inflection points")
+    PyPlot.figure(figsize=(12,6))
+    PyPlot.title("Protein $protein: stationary and inflection points")
     for i in 1:ny
         y = [protcon[i] for _ in 1:N]
         slbet = fwd1ptxy.(x,y)
-        plot(x,slbet,label="betamix at prot. conc. $(round(y[1],digits=4)) ")
+        PyPlot.plot(x,slbet,label="betamix at prot. conc. $(round(y[1],digits=4)) ")
         
-        plot(statpts[i],fwd1ptxy.(statpts[i],protcon[i]),"or")
+        PyPlot.plot(statpts[i],fwd1ptxy.(statpts[i],protcon[i]),"or")
         for z in 1:length(statpts[i])
-            text(statpts[i][z],fwd1ptxy.(statpts[i][z],protcon[i]),
-                 string(z),color="red")
+            PyPlot.text(statpts[i][z],fwd1ptxy.(statpts[i][z],protcon[i]),
+                        string(z),color="red")
         end
         
-        plot(inflpts[i],fwd1ptxy.(inflpts[i],protcon[i]),"ob")
+        PyPlot.plot(inflpts[i],fwd1ptxy.(inflpts[i],protcon[i]),"ob")
         for z in 1:length(inflpts[i])
-            text(inflpts[i][z],fwd1ptxy.(inflpts[i][z],protcon[i]),
-                 string(z),color="blue")
+            PyPlot.text(inflpts[i][z],fwd1ptxy.(inflpts[i][z],protcon[i]),
+                        string(z),color="blue")
         end
     end
-    legend()
-    xlabel("SDS concentration [mM]")
-    ylabel("Enthalpy [kJ/mol]")
-    tight_layout()
+    PyPlot.legend()
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Enthalpy [kJ/mol]")
+    PyPlot.tight_layout()
     
     try
         mkdir(outdir)
     catch
         nothing
     end
-    savefig(joinpath(outdir,protein*"_foundfeatures_betamix.pdf"))
+    PyPlot.savefig(joinpath(outdir,protein*"_foundfeatures_betamix.pdf"))
     return
 end
 
@@ -538,23 +538,23 @@ function plotsingleexperiments(outdir,dobs,betamix=nothing) #; expernumber=nothi
         xy = dobs.sdsprotcon[idx,:]
         obsexper = dobs.enthalpy[idx]
 
-        figure(figsize=(12,6.4))
-        title("Protein: $protein, initial concentration: $(xy[1,2])")
-        plot(xy[:,1],obsexper,".-k",linewidth=2,label="measured data")
+        PyPlot.figure(figsize=(12,6.4))
+        PyPlot.title("Protein: $protein, initial concentration: $(xy[1,2])")
+        PyPlot.plot(xy[:,1],obsexper,".-k",linewidth=2,label="measured data")
 
         if betamix!=nothing
             dcalcall = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
-            plot(xy[:,1],dcalcall,".-r",linewidth=2,label="calculated data")
+            PyPlot.plot(xy[:,1],dcalcall,".-r",linewidth=2,label="calculated data")
             ncomp = size(betamix.modkonamp,2)
             for c=1:ncomp
                 dcalc1 = singlescaledbeta2D(betamix.betpar,xy,betamix.modkonamp[:,c])
-                plot(xy[:,1],dcalc1,".--",linewidth=0.7,markersize=0.75,label="Beta comp. $c")
+                PyPlot.plot(xy[:,1],dcalc1,".--",linewidth=0.7,markersize=0.75,label="Beta comp. $c")
             end
         end
-        legend()
-        xlabel("SDS concentration [mM]")
-        ylabel("Enthalpy [kJ/mol")
-        tight_layout()
+        PyPlot.legend()
+        PyPlot.xlabel("SDS concentration [mM]")
+        PyPlot.ylabel("Enthalpy [kJ/mol")
+        PyPlot.tight_layout()
 
         try
             mkdir(outdir)
@@ -562,9 +562,9 @@ function plotsingleexperiments(outdir,dobs,betamix=nothing) #; expernumber=nothi
             nothing
         end
         if betamix!=nothing
-            savefig(joinpath(outdir,protein*"_experiment$(i)_fit.pdf"))
+            PyPlot.savefig(joinpath(outdir,protein*"_experiment$(i)_fit.pdf"))
         else
-            savefig(joinpath(outdir,protein*"_experiment$(i).pdf"))
+            PyPlot.savefig(joinpath(outdir,protein*"_experiment$(i).pdf"))
         end
     end
 
@@ -576,12 +576,12 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir )
+function plotareavsprotcon(proteinname,protcons,areas,linfitres,resstdev,outdir )
 
     ncomp = size(areas,2)
-    figure()
+    PyPlot.figure()
  
-    println("### Protein $proteinname, area vs. protein conc. ###")
+    PyPlot.println("### Protein $proteinname, area vs. protein conc. ###")
     ##------------------------
     # linear fits
     ncomp = size(linfitres,1)
@@ -593,26 +593,27 @@ function plotareavsprotcon(proteinname,protcons,areas,linfitres,outdir )
         interc = linfitres[i,2]
         println("Linear fit, Beta comp. #$i, ang.coef.=$acoe,\n                           intecept=$interc")
         ym = acoe.*xm .+ interc
-        plot(xm,ym,"-k",linewidth=1.5)
+        PyPlot.plot(xm,ym,"-k",linewidth=1.5)
     end
 
     ##------------------------------
     # areas 
     for i=1:ncomp
-        plot(protcons,areas[:,i],"o",
-             markersize=8,linewidth=2.5,label="Beta comp. #$i")
+        rsd = round(resstdev[i],sigdigits=3)
+        PyPlot.plot(protcons,areas[:,i],"o",
+                    markersize=8,linewidth=2.5,label="Beta comp. #$i, res. std $rsd")
     end
-    legend()
-    xlabel("Protein concentration [mM]")
-    ylabel("Area [kJ]")
-    tight_layout()
+    PyPlot.legend()
+    PyPlot.xlabel("Protein concentration [mM]")
+    PyPlot.ylabel("Area [kJ]")
+    PyPlot.tight_layout()
 
     try
         mkdir(outdir)
     catch
         nothing
     end
-    savefig(joinpath(outdir,proteinname*"_areavsprotcon.pdf"))
+    PyPlot.savefig(joinpath(outdir,proteinname*"_areavsprotcon.pdf"))
     return
 end
 
@@ -633,8 +634,8 @@ function plotbetacomp1D(betamix,protcon) #; expernumber=nothing)
     #     return out[1] 
     # end
 
-    figure(figsize=(12,6.4))
-    title("Protein: $protein, concentration: $protcon")
+    PyPlot.figure(figsize=(12,6.4))
+    PyPlot.title("Protein: $protein, concentration: $protcon")
 
     N = 100
     x = collect(LinRange(betamix.betpar.a,betamix.betpar.b,N))
@@ -647,17 +648,17 @@ function plotbetacomp1D(betamix,protcon) #; expernumber=nothing)
         xy = [x y]
         enth = forwmod2D(betamix.betpar,xy,betamix.modkonamp[:,c:c])
         bpars = round.(betamix.modkonamp[:,c:c],digits=2)
-        plot(x,enth,"--",linewidth=1,label="Beta comp. $c, $(bpars)")
+        PyPlot.plot(x,enth,"--",linewidth=1,label="Beta comp. $c, $(bpars)")
         #@show c,betamix.modkonamp[:,c:c]
     end
 
     enth = forwmod2D(betamix.betpar,xy,betamix.modkonamp)
-    plot(x,enth,"-",linewidth=2,color="red",label="sum of Beta func.")
+    PyPlot.plot(x,enth,"-",linewidth=2,color="red",label="sum of Beta func.")
 
-    legend()
-    xlabel("SDS concentration [mM]")
-    ylabel("Enthalpy [kJ/mol")
-    tight_layout()
+    PyPlot.legend()
+    PyPlot.xlabel("SDS concentration [mM]")
+    PyPlot.ylabel("Enthalpy [kJ/mol")
+    PyPlot.tight_layout()
 
     return
 end

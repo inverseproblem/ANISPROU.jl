@@ -45,6 +45,8 @@ export area_enthalpy,volume_enthalpy,areasvsprotcon
 export plotbindisotherm,plotfoundfeatures
 export plotareavsprotcon,plotbetacomp1D
 export plotparamlines
+export plotsurface3D
+
 
 include("utils.jl")
 include("readITCdata.jl")

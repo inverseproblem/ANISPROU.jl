@@ -241,14 +241,8 @@ nothing # hide
 
 It is possible to make a 3D plot showing the surface defined by the Beta mix and, in addition, the set of observed data as circles.
 ```@example procITC
-using GLMakie
-plotsurface3D(dobs,betamix,markersize=3500)
+plotsurface3D(dobs,betamix,markersize=3500,savefig=true,outdir="figs")
 nothing # hide
-```
-```@setup procITC
-fig=plotsurface3D(dobs,betamix,markersize=3500,displayfig=false);
-Makie.save("figs/surfaceplot.png", fig) 
-nothing 
 ```
 ![](figs/surfaceplot.png)
 
@@ -285,7 +279,7 @@ The next step involves selecting a subset of the found points to construct the b
 selectstatpts = Vector{Array{<:Real,2}}(undef,0)
 
 push!(selectstatpts, [ statpts[1][2] protcon[1];
-	                   statpts[2][2] protcon[2];
+                       statpts[2][2] protcon[2];
                        statpts[3][2] protcon[3];
                        statpts[4][2] protcon[4] ] )
 
@@ -316,11 +310,6 @@ push!(selectinflpts, [ inflpts[1][2] protcon[1];
                        inflpts[2][3] protcon[2];
                        inflpts[3][3] protcon[3];
                        inflpts[4][3] protcon[4] ] )
-
-#push!(selectinflpts, [ inflpts[1][3] protcon[1];
-#                       inflpts[2][4] protcon[2];
-#                       inflpts[3][4] protcon[3];
-#                       inflpts[4][4] protcon[4] ] )
 
 push!(selectinflpts, [ inflpts[1][4] protcon[1];
                        inflpts[2][5] protcon[2];
@@ -362,7 +351,7 @@ It is also possible to calculate the area for each Beta component for a set of d
 N = 15
 protcons = collect(LinRange(0.0,0.14,N)) # set of protein concentrations
 areas,erras,linfitres,resstdev = areasvsprotcon(betamix,protcons,outdir,protein)
-plotareavsprotcon(protein,protcons,areas,linfitres,outdir) # plot area as a function of protein concentration
+plotareavsprotcon(protein,protcons,areas,linfitres,resstdev,outdir) # plot area as a function of protein concentration
 savefig("plotsetareas.svg") # hide
 nothing # hide
 ```	

@@ -6,7 +6,8 @@ $(TYPEDSIGNATURES)
 Plot the a 3D surface from the Beta mix together measured data as circles.
 """
 function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=3500,
-                       displayfig=true, ymin=nothing,ymax=nothing)
+                       displayfig=true, ymin=nothing,ymax=nothing,
+                       savefig=false,outdir="")
 
     # markersize=350Makie.px
 
@@ -53,6 +54,11 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=3500,
     ax1.xlabel = "[SDS]"
     ax1.ylabel = "[$(dobs.protein)]x$yscal"
     ax1.zlabel = "Enthalpy x $zscal"
+
+    if savefig
+        flname = joinpath(outdir,"surfaceplot.png")
+        GLMakie.save(flname,fig)
+    end
 
     Makie.center!(fig.scene)
     if displayfig
