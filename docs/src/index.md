@@ -19,7 +19,7 @@ Pages = ["index.md"]
 # Installation
 
 To install the package simple enter into the package manager mode in Julia by typing "`]`" at the REPL prompt and then use `add`, i.e.,
-```julia
+```
 (v1.6) pkg> add ANISPROU
 ```
 The package will be automatically downloaded from the web and installed.
@@ -29,7 +29,7 @@ The package will be automatically downloaded from the web and installed.
     At the moment the package is not yet registered in the official Julia registry, so, 
     to install it run the following in package mode:
 		
-    ```julia
+    ```
     (v1.6) pkg> add https://github.com/inverseproblem/ANISPROU.jl
     ```
 

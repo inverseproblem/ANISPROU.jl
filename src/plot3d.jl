@@ -44,12 +44,12 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=3500,
 
 
     ## Makie plot    
-    fig = Makie.Figure(resolution = (1000, 800))
-    ax1 = Makie.Axis3(fig[1,1]) # Axis3 -> 3D
+    fig = GLMakie.Figure(resolution = (1000, 800))
+    ax1 = GLMakie.Axis3(fig[1,1]) # Axis3 -> 3D
 
-    Makie.surface!(ax1,xv,yscal*yv,zscal*dcalc,alpha=1.0,colormap=:rainbow1)
+    GLMakie.surface!(ax1,xv,yscal*yv,zscal*dcalc,alpha=1.0,colormap=:rainbow1)
 
-    Makie.scatter!(ax1,xobs,yscal*yobs,zscal*zobs,color=:black,markersize=markersize)
+    GLMakie.scatter!(ax1,xobs,yscal*yobs,zscal*zobs,color=:black,markersize=markersize)
 
     ax1.xlabel = "[SDS]"
     ax1.ylabel = "[$(dobs.protein)]x$yscal"
@@ -60,7 +60,7 @@ function plotsurface3D(dobs,betamix ; yscal=1e2, zscal=2.0, markersize=3500,
         GLMakie.save(flname,fig)
     end
 
-    Makie.center!(fig.scene)
+    GLMakie.center!(fig.scene)
     if displayfig
         display(fig)
     end
